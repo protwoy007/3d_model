@@ -1,5 +1,3 @@
-# img23d
-
 Turn a single photo into a 3D model in your browser. Upload an image, wait a minute, rotate the result, and download it as a `.glb` file.
 
 Built with FastAPI, a plain HTML frontend, and [`<model-viewer>`](https://modelviewer.dev/) for the 3D preview.
@@ -148,21 +146,6 @@ Close other programs that use the GPU, or lower `mc_resolution` in `local_tripos
 **Port 8000 is already in use**
 Change `8000` to another number in the `uvicorn` line and in the two `http://127.0.0.1:8000` URLs inside the launcher.
 
-**Start over from scratch**
-Delete `venv`, `venv-gpu`, and `TripoSR`, then run the launcher again.
-
-## Publish on GitHub
-
-```powershell
-git init
-git add .
-git commit -m "Initial commit"
-git branch -M main
-git remote add origin https://github.com/YOUR-USERNAME/img23d.git
-git push -u origin main
-```
-
-Create the empty repository on github.com first. Add a `LICENSE` file of your choice before sharing.
 
 ## Credits
 
