@@ -1,6 +1,20 @@
-Turn a single photo into a 3D model in your browser. Upload an image, wait a minute, rotate the result, and download it as a `.glb` file.
+# img23d
 
-Built with FastAPI, a plain HTML frontend, and [`<model-viewer>`](https://modelviewer.dev/) for the 3D preview.
+Turn a single photo into a 3D model in your browser. Upload an image, wait a minute, rotate the result, and download it as GLB, STL, or OBJ.
+
+Built with FastAPI, SQLite, a plain HTML frontend, and [`<model-viewer>`](https://modelviewer.dev/) for the 3D preview.
+
+## Features
+
+- **Two engines in free mode:** Stable Fast 3D and TripoSR, both running on free Hugging Face GPUs.
+- **Auto engine:** tries Stable Fast 3D first and switches to TripoSR if it fails. Each engine is retried once.
+- **Compare mode:** builds the same photo with both engines and shows the results side by side with build time, vertex count, face count, and file size.
+- **Job queue with live progress:** jobs run one at a time, and the page shows the queue position and current step.
+- **History:** every model is saved in a local SQLite database. Reopen, download, or delete past models on the History tab.
+- **Export formats:** GLB (with textures), STL for 3D printing, and OBJ (shape only).
+- **Build options:** object size in frame, mesh detail, mesh style, and texture quality.
+- **Readable errors:** quota problems, busy services, and network failures are explained in plain language.
+- **GPU mode:** run TripoSR on your own NVIDIA GPU with no online service.
 
 ## Two ways to run it
 
@@ -8,10 +22,11 @@ Built with FastAPI, a plain HTML frontend, and [`<model-viewer>`](https://modelv
 |---|---|---|
 | Launcher | `run_free.bat` | `run_gpu.bat` |
 | Needs a GPU in your PC | No | Yes, NVIDIA with about 6 GB VRAM or more |
-| Where the model runs | Free Hugging Face Space (Stable Fast 3D) | Your own GPU (TripoSR) |
+| Where the model runs | Free Hugging Face Spaces | Your own GPU (TripoSR) |
+| Engines | Stable Fast 3D, TripoSR, Auto, Compare | TripoSR |
 | Internet needed while using it | Yes | Only for the first setup |
-| Speed | 30-90 seconds, slower when the Space is busy | A few seconds |
-| Privacy | Images are sent to a public Hugging Face Space | Images never leave your PC |
+| Speed | 30-90 seconds, slower when the Spaces are busy | A few seconds |
+| Privacy | Images are sent to public Hugging Face Spaces | Images never leave your PC |
 | First-run setup | A few minutes | 15-30 minutes |
 
 ## Quick start (Windows)
@@ -20,10 +35,26 @@ Built with FastAPI, a plain HTML frontend, and [`<model-viewer>`](https://modelv
 2. Double-click the launcher you want:
    - **No GPU:** `run_free.bat`
    - **NVIDIA GPU:** `run_gpu.bat`
-3. Your browser opens at `http://127.0.0.1:8000`. Upload an image and click **Build 3D model**.
+3. Your browser opens at `http://127.0.0.1:8000`. Choose an image and click **Build 3D model**.
 4. Close the black terminal window to stop the server.
 
-Each launcher does the setup for you on the first run. Later runs start straight away.
+Each launcher sets everything up on the first run. Later runs start straight away.
+
+## Using the app
+
+1. **Create tab:** drop or choose an image. Open **Options** to change the engine and quality settings.
+2. Tick **Compare both engines** to build the model twice and see both results next to each other.
+3. Click **Build 3D model**. Drag the finished model to rotate it, and scroll to zoom.
+4. Download **GLB** for the full model, **STL for printing** for 3D printers, or **OBJ, shape only** for geometry without textures.
+5. **History tab:** every build is listed with its engine, build time, and size. Use **Open** to view it again or **Delete** to remove it and its files.
+
+| Option | What it does | Applies to |
+|---|---|---|
+| Model engine | Auto, Stable Fast 3D, or TripoSR | Free mode |
+| Object size in frame | How much of the image the object fills | Both engines |
+| Mesh detail | Resolution of the extracted mesh | TripoSR |
+| Mesh style | Original, clean triangles, or clean quads | Stable Fast 3D |
+| Texture quality | 512, 1024, or 2048 px textures | Stable Fast 3D |
 
 ## What each launcher does
 
@@ -46,11 +77,11 @@ Each launcher does the setup for you on the first run. Later runs start straight
 8. Installs PyTorch with CUDA, the app packages from `requirements-gpu.txt`, the TripoSR packages, and compiles `torchmcubes`.
 9. Verifies that PyTorch can see your GPU, then starts the server and opens your browser when it is ready.
 
-The first start also downloads the TripoSR model weights, so it takes a few minutes. After that it starts quickly.
+The first GPU start also downloads the TripoSR model weights, so it takes a few minutes. After that it starts quickly.
 
 ## Hugging Face token (free mode)
 
-The free Hugging Face Space gives anonymous users a small GPU quota. A free token raises it and avoids most "upstream error" failures.
+The free Hugging Face Spaces give anonymous users a small GPU quota. A free token raises it and avoids most quota errors.
 
 1. Make a free account at https://huggingface.co
 2. Open https://huggingface.co/settings/tokens and create a token of type **Read**.
@@ -62,7 +93,9 @@ To change the token, delete `.hf_token` and run the launcher again.
 
 ```
 img23d/
-  main.py               FastAPI server and API
+  main.py               FastAPI server, job queue, and API
+  engines.py            Stable Fast 3D, TripoSR, and local GPU engines with retry and fallback
+  store.py              SQLite job history
   local_triposr.py      TripoSR inference code (GPU mode)
   static/
     index.html          Web interface
@@ -74,7 +107,20 @@ img23d/
   .gitignore
 ```
 
-Created on first run and ignored by Git: `venv/`, `venv-gpu/`, `outputs/`, `TripoSR/`, `.hf_token`.
+Created on first run and ignored by Git: `venv/`, `venv-gpu/`, `outputs/` (images and models), `data/` (history database), `TripoSR/`, `.hf_token`.
+
+## API
+
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/api/config` | Mode, available engines, token status |
+| POST | `/api/jobs` | Upload an image and queue a job. Form fields: `file`, `engine`, `foreground_ratio`, `mesh_detail`, `remesh`, `texture_size` |
+| GET | `/api/jobs` | List history, newest first |
+| GET | `/api/jobs/{id}` | Job status, stage, engine used, and mesh stats |
+| DELETE | `/api/jobs/{id}` | Delete a job and its files |
+| GET | `/api/jobs/{id}/download/{glb\|stl\|obj}` | Download a finished model |
+
+Interactive API docs are available at `http://127.0.0.1:8000/docs` while the server runs.
 
 ## Configuration
 
@@ -83,7 +129,6 @@ Created on first run and ignored by Git: `venv/`, `venv-gpu/`, `outputs/`, `Trip
 | `MODE` | set by the launchers | `hf` / `local` | Chooses Hugging Face or local GPU |
 | `HF_TOKEN` | environment variable or `.hf_token` | none | Hugging Face token for free mode |
 | `CUDA_TAG` | top of `run_gpu.bat` | `cu121` | PyTorch CUDA build. Use `cu128` for RTX 50-series |
-| `mc_resolution` | `local_triposr.py` | `256` | Mesh detail. Lower it if you run out of GPU memory |
 | Port | end of both `.bat` files | `8000` | Change `--port 8000` and the two URLs if the port is busy |
 
 ## Manual setup
@@ -124,11 +169,21 @@ Then open http://127.0.0.1:8000.
 - Keep the object fully in frame and well lit.
 - Avoid glass, mirrors, and very thin parts.
 - A single photo gives a guessed 3D shape. The back and hidden sides are generated by the model, so the result is not suitable for exact measurements.
+- STL files have no color or texture. They suit 3D printing, not display.
 
 ## Troubleshooting
 
-**"The upstream Gradio app has raised an exception" (free mode)**
-The Hugging Face Space is busy or your anonymous quota is used up. Add a Hugging Face token (see above), wait a few minutes, and try again. Test with a simple image under 2 MB.
+**"The free GPU quota is used up"**
+Wait for the time shown in the message, or add a Hugging Face token (see above). Compare mode uses the quota twice.
+
+**"The free GPU service failed on this image or is busy"**
+Try again, use the Auto engine, or use a simpler image with a plain background.
+
+**"The online model changed its interface"**
+The Hugging Face Space was updated. Try the other engine. To fix it, run the command below and compare the result with the calls in `engines.py`:
+```powershell
+python -c "from gradio_client import Client; Client('stabilityai/TripoSR').view_api()"
+```
 
 **Python not found**
 Install Python from https://www.python.org/downloads/ and tick "Add python.exe to PATH". GPU mode needs 3.10 or 3.11.
@@ -141,18 +196,31 @@ Install Python from https://www.python.org/downloads/ and tick "Add python.exe t
 Update your NVIDIA driver, delete the `venv-gpu` folder, and run `run_gpu.bat` again. For RTX 50-series cards set `CUDA_TAG` to `cu128` at the top of the file first.
 
 **Out of GPU memory**
-Close other programs that use the GPU, or lower `mc_resolution` in `local_triposr.py`.
+Close other programs that use the GPU, and set **Mesh detail** to Low.
 
 **Port 8000 is already in use**
 Change `8000` to another number in the `uvicorn` line and in the two `http://127.0.0.1:8000` URLs inside the launcher.
 
+**Clear all history**
+Stop the server, delete the `data` and `outputs` folders, and start it again.
+
+**Start over from scratch**
+Delete `venv`, `venv-gpu`, `TripoSR`, `data`, and `outputs`, then run the launcher again.
+
+## Publish updates to GitHub
+
+```powershell
+git add .
+git commit -m "Describe your change"
+git push
+```
 
 ## Credits
 
 - [TripoSR](https://github.com/VAST-AI-Research/TripoSR) by Stability AI and Tripo AI (MIT license)
 - [Stable Fast 3D](https://huggingface.co/stabilityai/stable-fast-3d) by Stability AI, used through a Hugging Face Space
 - [`<model-viewer>`](https://modelviewer.dev/) by Google
-- [FastAPI](https://fastapi.tiangolo.com/)
+- [FastAPI](https://fastapi.tiangolo.com/) and [trimesh](https://trimesh.org/)
 
 Check each model's license before using results commercially.
 

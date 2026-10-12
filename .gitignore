@@ -1,6 +1,7 @@
 venv/
 venv-gpu/
 outputs/
+data/
 TripoSR/
 __pycache__/
 *.pyc

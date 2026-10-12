@@ -16,6 +16,8 @@ echo.
 
 rem ---- 0. Project files ----
 if not exist main.py goto missing_files
+if not exist engines.py goto missing_files
+if not exist store.py goto missing_files
 if not exist local_triposr.py goto missing_files
 if not exist requirements-gpu.txt goto missing_files
 if not exist static\index.html goto missing_files
@@ -172,7 +174,7 @@ for /f "usebackq delims=" %%i in (`"%VSWHERE%" -latest -products * -requires Mic
 goto :eof
 
 :missing_files
-echo [ERROR] Project files are missing. Keep this file next to main.py, local_triposr.py, requirements-gpu.txt and the static folder.
+echo [ERROR] Project files are missing. Keep this file next to main.py, engines.py, store.py, local_triposr.py, requirements-gpu.txt and the static folder.
 pause
 exit /b 1
 

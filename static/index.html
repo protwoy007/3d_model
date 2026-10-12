@@ -20,6 +20,7 @@
     --danger: #A6261D;
   }
   * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
   html, body { margin: 0; }
   body {
     font-family: "Bricolage Grotesque", system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -31,165 +32,205 @@
     line-height: 1.5;
   }
   header, main, footer { width: 100%; max-width: 1180px; margin: 0 auto; padding-left: 24px; padding-right: 24px; }
-  header { padding-top: 22px; padding-bottom: 6px; }
+  header { padding-top: 22px; padding-bottom: 6px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
   .brand { font-weight: 800; font-size: 1.35rem; letter-spacing: -0.02em; }
   .brand span { color: var(--mat); }
+  nav { display: flex; gap: 4px; background: var(--paper); padding: 4px; border-radius: 12px; }
+  nav button { font: inherit; font-weight: 600; background: transparent; color: var(--muted); border: 0; padding: 8px 16px; border-radius: 9px; cursor: pointer; }
+  nav button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+  nav button:focus-visible, .go:focus-visible, .tool:focus-visible, summary:focus-visible, select:focus-visible, input[type=range]:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
 
-  main {
-    flex: 1;
-    display: grid;
-    grid-template-columns: 360px 1fr;
-    gap: 28px;
-    padding-top: 18px;
-    padding-bottom: 32px;
-    align-items: start;
-  }
+  main { flex: 1; padding-top: 18px; padding-bottom: 32px; }
+  #view-create { display: grid; grid-template-columns: 360px 1fr; gap: 28px; align-items: start; }
 
-  .panel h1 {
-    font-size: clamp(2rem, 3.4vw, 2.8rem);
-    line-height: 1.04;
-    letter-spacing: -0.03em;
-    font-weight: 800;
-    margin: 6px 0 12px;
-  }
+  .panel h1 { font-size: clamp(2rem, 3.4vw, 2.8rem); line-height: 1.04; letter-spacing: -0.03em; font-weight: 800; margin: 6px 0 12px; }
   .panel p.lead { margin: 0 0 22px; color: var(--muted); max-width: 34ch; }
 
-  .drop {
-    display: block;
-    position: relative;
-    background: var(--paper);
-    border: 2px dashed #A9B1AB;
-    border-radius: 16px;
-    min-height: 190px;
-    cursor: pointer;
-    overflow: hidden;
-    transition: border-color .15s, background .15s;
-  }
+  .drop { display: block; position: relative; background: var(--paper); border: 2px dashed #A9B1AB; border-radius: 16px; min-height: 190px; cursor: pointer; overflow: hidden; transition: border-color .15s, background .15s; }
   .drop:hover, .drop.over { border-color: var(--mat); background: #fff; }
   .drop:focus-within { outline: 3px solid var(--tape); outline-offset: 3px; }
   .drop input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
-  .drop .hint {
-    position: absolute; inset: 0;
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    gap: 4px; padding: 20px; text-align: center; pointer-events: none;
-  }
+  .drop .hint { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 20px; text-align: center; pointer-events: none; }
   .drop .hint strong { font-size: 1.05rem; }
   .drop .hint span { color: var(--muted); font-size: .92rem; }
   .drop img { display: none; width: 100%; height: 190px; object-fit: contain; background: var(--paper); }
   .drop.has-image img { display: block; }
   .drop.has-image .hint { display: none; }
 
-  button {
-    font: inherit; cursor: pointer; border: 0;
-  }
-  .go {
-    margin-top: 14px; width: 100%;
-    background: var(--tape); color: var(--ink);
-    font-weight: 800; font-size: 1.05rem;
-    padding: 14px 18px; border-radius: 12px;
-    transition: transform .08s, filter .15s;
-  }
+  details.opts { margin-top: 14px; background: var(--paper); border-radius: 14px; padding: 4px 16px; }
+  details.opts summary { cursor: pointer; font-weight: 600; padding: 10px 0; }
+  .field { display: flex; flex-direction: column; gap: 4px; padding: 8px 0 12px; }
+  .field label { font-weight: 600; font-size: .95rem; }
+  .field small { color: var(--muted); font-size: .82rem; }
+  .field select { font: inherit; padding: 9px 10px; border-radius: 9px; border: 1px solid #B8BEB8; background: #fff; color: var(--ink); }
+  .field input[type=range] { width: 100%; accent-color: var(--mat); }
+  .check { display: flex; gap: 10px; align-items: flex-start; margin-top: 14px; cursor: pointer; }
+  .check input { margin-top: 5px; accent-color: var(--mat); width: 18px; height: 18px; }
+  .check b { display: block; }
+  .check small { color: var(--muted); }
+
+  button { font: inherit; cursor: pointer; border: 0; }
+  .go { margin-top: 14px; width: 100%; background: var(--tape); color: var(--ink); font-weight: 800; font-size: 1.05rem; padding: 14px 18px; border-radius: 12px; transition: transform .08s, filter .15s; }
   .go:hover:not(:disabled) { filter: brightness(1.05); }
   .go:active:not(:disabled) { transform: translateY(1px); }
   .go:disabled { background: #D6D9D2; color: #8A948E; cursor: not-allowed; }
-  .go:focus-visible, .tool:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
 
   .status { min-height: 1.5em; margin: 12px 2px 0; font-size: .95rem; color: var(--muted); }
   .status.error { color: var(--danger); font-weight: 600; }
   .engine { margin: 18px 2px 0; font-size: .85rem; color: var(--muted); }
 
-  .stage {
-    position: relative;
-    min-height: 600px;
-    border-radius: 22px;
-    overflow: hidden;
-    background-color: var(--mat);
-    background-image:
-      linear-gradient(rgba(255,255,255,.22) 1.5px, transparent 1.5px),
-      linear-gradient(90deg, rgba(255,255,255,.22) 1.5px, transparent 1.5px),
-      linear-gradient(var(--mat-line) 1px, transparent 1px),
-      linear-gradient(90deg, var(--mat-line) 1px, transparent 1px);
+  .stage { position: relative; min-height: 620px; border-radius: 22px; overflow: hidden; background-color: var(--mat);
+    background-image: linear-gradient(rgba(255,255,255,.22) 1.5px, transparent 1.5px), linear-gradient(90deg, rgba(255,255,255,.22) 1.5px, transparent 1.5px), linear-gradient(var(--mat-line) 1px, transparent 1px), linear-gradient(90deg, var(--mat-line) 1px, transparent 1px);
     background-size: 160px 160px, 160px 160px, 32px 32px, 32px 32px;
-    box-shadow: 0 0 0 6px var(--paper), 0 0 0 7px #C9CDC6;
-  }
+    box-shadow: 0 0 0 6px var(--paper), 0 0 0 7px #C9CDC6; }
   .layer { position: absolute; inset: 0; display: none; }
-  .stage[data-state="idle"] #empty,
-  .stage[data-state="working"] #working,
-  .stage[data-state="done"] #viewer-wrap { display: flex; }
+  .stage[data-state="idle"] #empty, .stage[data-state="working"] #working, .stage[data-state="done"] #results { display: flex; }
 
-  #empty {
-    align-items: center; justify-content: center; text-align: center;
-    color: #EAF2EE; padding: 24px;
-  }
+  #empty { align-items: center; justify-content: center; text-align: center; color: #EAF2EE; padding: 24px; }
   #empty p { margin: 0; font-size: 1.25rem; font-weight: 600; max-width: 22ch; }
 
-  #working { align-items: center; justify-content: center; flex-direction: column; gap: 16px; }
-  .shot { position: relative; width: min(60%, 340px); aspect-ratio: 1; background: var(--paper); border-radius: 14px; overflow: hidden; }
+  #working { align-items: center; justify-content: center; flex-direction: column; gap: 14px; padding: 20px; }
+  .shot { position: relative; width: min(55%, 320px); aspect-ratio: 1; background: var(--paper); border-radius: 14px; overflow: hidden; }
   .shot img { width: 100%; height: 100%; object-fit: contain; }
-  .scan {
-    position: absolute; left: 0; right: 0; height: 4px; background: var(--tape);
-    box-shadow: 0 0 18px 4px rgba(242,194,48,.7);
-    animation: scan 1.8s ease-in-out infinite alternate;
-  }
+  .scan { position: absolute; left: 0; right: 0; height: 4px; background: var(--tape); box-shadow: 0 0 18px 4px rgba(242,194,48,.7); animation: scan 1.8s ease-in-out infinite alternate; }
   @keyframes scan { from { top: 0; } to { top: calc(100% - 4px); } }
   .work-text { color: #EAF2EE; font-weight: 600; font-size: 1.05rem; }
+  .work-lines { color: #D3E4DC; font-size: .95rem; text-align: center; min-height: 1.5em; }
+  .work-lines div { margin: 2px 0; }
 
-  #viewer-wrap { align-items: stretch; }
-  model-viewer { width: 100%; height: 100%; min-height: 600px; --poster-color: transparent; background: transparent; }
-  .tools { position: absolute; right: 16px; bottom: 16px; display: flex; gap: 10px; }
-  .tool {
-    background: var(--paper); color: var(--ink);
-    padding: 10px 16px; border-radius: 10px; font-weight: 600; font-size: .95rem;
-    text-decoration: none; display: inline-block;
-  }
-  .tool.primary { background: var(--tape); font-weight: 800; }
+  #results { padding: 12px; gap: 12px; display: none; }
+  .stage[data-state="done"] #results { display: grid; grid-template-columns: repeat(var(--n, 1), minmax(0, 1fr)); }
+  .card { display: flex; flex-direction: column; min-width: 0; border-radius: 14px; overflow: hidden; background: rgba(0,0,0,.12); }
+  .card .view { flex: 1; min-height: 360px; position: relative; }
+  .card model-viewer { position: absolute; inset: 0; width: 100%; height: 100%; --poster-color: transparent; background: transparent; }
+  .card .fail { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 24px; color: #fff; gap: 8px; }
+  .card .fail b { font-size: 1.15rem; }
+  .info { background: var(--paper); padding: 12px 14px; display: flex; flex-direction: column; gap: 2px; }
+  .info .title { font-weight: 800; }
+  .info .meta { color: var(--muted); font-size: .9rem; }
+  .info .errtext { color: var(--danger); font-size: .92rem; }
+  .dl { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .tool { background: #fff; color: var(--ink); padding: 8px 14px; border-radius: 9px; font-weight: 600; font-size: .9rem; text-decoration: none; display: inline-block; border: 1px solid #C3C8C2; }
+  .tool.primary { background: var(--tape); border-color: var(--tape); font-weight: 800; }
+  .tool.danger { color: var(--danger); }
+  .newimg { position: absolute; top: 18px; right: 18px; z-index: 2; background: var(--paper); color: var(--ink); padding: 8px 14px; border-radius: 9px; font-weight: 600; display: none; }
+  .stage[data-state="done"] .newimg { display: block; }
+
+  /* history */
+  .hist-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 18px; }
+  .hist-head h2 { margin: 0; font-size: 1.9rem; letter-spacing: -0.02em; font-weight: 800; }
+  .hist-head p { margin: 0; color: var(--muted); }
+  .hist { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 18px; }
+  .hcard { background: var(--paper); border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; }
+  .hcard img { width: 100%; aspect-ratio: 4/3; object-fit: cover; background: #fff; display: block; }
+  .hbody { padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 2px; flex: 1; }
+  .hbody .name { font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .hbody .meta { color: var(--muted); font-size: .88rem; }
+  .hbody .bad { color: var(--danger); font-size: .88rem; font-weight: 600; }
+  .hbody .dl { margin-top: auto; padding-top: 10px; }
+  .empty-hist { color: var(--muted); padding: 40px 0; }
 
   footer { padding-top: 14px; padding-bottom: 26px; color: var(--muted); font-size: .9rem; }
 
-  @media (max-width: 860px) {
-    main { grid-template-columns: 1fr; }
-    .stage { min-height: 460px; }
-    model-viewer { min-height: 460px; }
+  @media (max-width: 900px) {
+    #view-create { grid-template-columns: 1fr; }
+    .stage { min-height: 480px; }
+    .stage[data-state="done"] #results { grid-template-columns: 1fr; overflow-y: auto; }
+    .card .view { min-height: 320px; }
   }
-  @media (prefers-reduced-motion: reduce) {
-    .scan { animation: none; top: 50%; }
-  }
+  @media (prefers-reduced-motion: reduce) { .scan { animation: none; top: 50%; } }
 </style>
 </head>
 <body>
-  <header><div class="brand">img<span>23d</span></div></header>
+  <header>
+    <div class="brand">img<span>23d</span></div>
+    <nav aria-label="Sections">
+      <button type="button" id="tab-create" aria-pressed="true">Create</button>
+      <button type="button" id="tab-history" aria-pressed="false">History</button>
+    </nav>
+  </header>
 
   <main>
-    <section class="panel">
-      <h1>Turn one photo into a 3D model</h1>
-      <p class="lead">Use a single object on a plain background. Most models take 30 to 90 seconds.</p>
+    <div id="view-create">
+      <section class="panel">
+        <h1>Turn one photo into a 3D model</h1>
+        <p class="lead">Use a single object on a plain background. Most models take 30 to 90 seconds.</p>
 
-      <label class="drop" id="drop">
-        <input type="file" id="file" accept="image/png,image/jpeg,image/webp">
-        <div class="hint"><strong>Drop an image here</strong><span>or click to choose a file (PNG, JPG, WebP)</span></div>
-        <img id="preview" alt="Selected image preview">
-      </label>
+        <label class="drop" id="drop">
+          <input type="file" id="file" accept="image/png,image/jpeg,image/webp">
+          <div class="hint"><strong>Drop an image here</strong><span>or click to choose a file (PNG, JPG, WebP)</span></div>
+          <img id="preview" alt="Selected image preview">
+        </label>
 
-      <button class="go" id="go" disabled>Build 3D model</button>
-      <p class="status" id="status" role="status" aria-live="polite"></p>
-      <p class="engine" id="engine"></p>
-    </section>
+        <details class="opts">
+          <summary>Options</summary>
+          <div class="field">
+            <label for="engine-sel">Model engine</label>
+            <select id="engine-sel"></select>
+            <small>Auto tries Stable Fast 3D first and switches to TripoSR if it fails.</small>
+          </div>
+          <div class="field">
+            <label for="fg">Object size in frame: <span id="fg-val">85%</span></label>
+            <input type="range" id="fg" min="0.5" max="1" step="0.05" value="0.85">
+            <small>Lower it if the object touches the image edges.</small>
+          </div>
+          <div class="field">
+            <label for="detail">Mesh detail</label>
+            <select id="detail">
+              <option value="low">Low, fastest</option>
+              <option value="medium" selected>Medium</option>
+              <option value="high">High, slowest</option>
+            </select>
+            <small>Applies to TripoSR.</small>
+          </div>
+          <div class="field">
+            <label for="remesh">Mesh style</label>
+            <select id="remesh">
+              <option value="None" selected>Original</option>
+              <option value="Triangle">Clean triangles</option>
+              <option value="Quad">Clean quads</option>
+            </select>
+            <small>Applies to Stable Fast 3D.</small>
+          </div>
+          <div class="field">
+            <label for="tex">Texture quality</label>
+            <select id="tex">
+              <option value="512">Small, 512 px</option>
+              <option value="1024" selected>Standard, 1024 px</option>
+              <option value="2048">Sharp, 2048 px</option>
+            </select>
+            <small>Applies to Stable Fast 3D.</small>
+          </div>
+        </details>
 
-    <section class="stage" id="stage" data-state="idle" aria-label="3D model preview">
-      <div class="layer" id="empty"><p>Your 3D model will appear here</p></div>
+        <label class="check" id="compare-wrap">
+          <input type="checkbox" id="compare">
+          <span><b>Compare both engines</b><small>Builds the model twice and shows the results side by side. Takes about twice as long.</small></span>
+        </label>
 
-      <div class="layer" id="working">
-        <div class="shot"><img id="shot" alt=""><div class="scan"></div></div>
-        <div class="work-text" id="work-text">Building your model... 0:00</div>
-      </div>
+        <button class="go" id="go" disabled>Build 3D model</button>
+        <p class="status" id="status" role="status" aria-live="polite"></p>
+        <p class="engine" id="engine-note"></p>
+      </section>
 
-      <div class="layer" id="viewer-wrap">
-        <model-viewer id="viewer" camera-controls auto-rotate shadow-intensity="1" exposure="1.1" alt="Generated 3D model"></model-viewer>
-        <div class="tools">
-          <button class="tool" id="reset" type="button">New image</button>
-          <a class="tool primary" id="dl" download="model.glb">Download GLB</a>
+      <section class="stage" id="stage" data-state="idle" aria-label="3D model preview">
+        <button class="newimg" id="reset" type="button">New image</button>
+        <div class="layer" id="empty"><p>Your 3D model will appear here</p></div>
+        <div class="layer" id="working">
+          <div class="shot"><img id="shot" alt=""><div class="scan"></div></div>
+          <div class="work-text" id="work-text">Starting... 0:00</div>
+          <div class="work-lines" id="work-lines"></div>
         </div>
+        <div class="layer" id="results"></div>
+      </section>
+    </div>
+
+    <section id="view-history" hidden>
+      <div class="hist-head">
+        <h2>History</h2>
+        <p id="hist-count"></p>
       </div>
+      <div class="hist" id="hist"></div>
     </section>
   </main>
 
@@ -197,81 +238,231 @@
 
 <script>
 const $ = id => document.getElementById(id);
+function el(tag, cls, text) { const n = document.createElement(tag); if (cls) n.className = cls; if (text !== undefined) n.textContent = text; return n; }
+const fmtNum = n => (n == null ? "n/a" : n.toLocaleString());
+const fmtSize = kb => (kb == null ? "n/a" : kb >= 1024 ? (kb / 1024).toFixed(1) + " MB" : kb + " KB");
+const fmtTime = s => { s = Math.round(s); return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); };
+
 const stage = $("stage"), drop = $("drop"), fileInput = $("file"), goBtn = $("go"), statusEl = $("status");
-let currentFile = null, timer = null;
+let cfg = { mode: "hf", engines: [] };
+let currentFile = null, tracking = [], pollTimer = null, clock = null, t0 = 0, busy = false;
 
-fetch("/config").then(r => r.json()).then(c => {
-  $("engine").textContent = c.mode === "local" ? "Running on this computer's GPU." : "Running on a free Hugging Face GPU. It can be slow when busy.";
-}).catch(() => {});
+function setStatus(msg, isError) { statusEl.textContent = msg || ""; statusEl.className = "status" + (isError ? " error" : ""); }
 
-function setStatus(msg, isError) {
-  statusEl.textContent = msg || "";
-  statusEl.className = "status" + (isError ? " error" : "");
+/* ---------- config ---------- */
+async function loadConfig() {
+  try { cfg = await (await fetch("/api/config")).json(); } catch (_) {}
+  const sel = $("engine-sel"); sel.replaceChildren();
+  cfg.engines.forEach(e => { const o = el("option", "", e.label); o.value = e.id; sel.appendChild(o); });
+  const local = cfg.mode === "local";
+  $("compare-wrap").hidden = local;
+  $("engine-sel").disabled = local;
+  $("engine-note").textContent = local
+    ? "Running on this computer's GPU."
+    : "Running on free Hugging Face GPUs. It can be slow when they are busy." + (cfg.token ? "" : " Add a Hugging Face token to avoid quota errors.");
 }
 
+/* ---------- tabs ---------- */
+function showTab(name) {
+  const create = name === "create";
+  $("view-create").hidden = !create;
+  $("view-history").hidden = create;
+  $("tab-create").setAttribute("aria-pressed", create);
+  $("tab-history").setAttribute("aria-pressed", !create);
+  if (!create) loadHistory();
+}
+$("tab-create").onclick = () => showTab("create");
+$("tab-history").onclick = () => showTab("history");
+$("fg").addEventListener("input", () => { $("fg-val").textContent = Math.round($("fg").value * 100) + "%"; });
+
+/* ---------- file selection ---------- */
 function setFile(f) {
   if (!f) return;
   if (!f.type.startsWith("image/")) { setStatus("Choose an image file (PNG, JPG or WebP).", true); return; }
   if (f.size > 10 * 1024 * 1024) { setStatus("That image is over 10 MB. Choose a smaller one.", true); return; }
   currentFile = f;
   const url = URL.createObjectURL(f);
-  $("preview").src = url;
-  $("shot").src = url;
+  $("preview").src = url; $("shot").src = url;
   drop.classList.add("has-image");
-  goBtn.disabled = false;
+  goBtn.disabled = busy;
   setStatus("");
 }
-
 fileInput.addEventListener("change", () => setFile(fileInput.files[0]));
 ["dragenter", "dragover"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add("over"); }));
 ["dragleave", "drop"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove("over"); }));
 drop.addEventListener("drop", e => setFile(e.dataTransfer.files[0]));
 
-function startTimer() {
-  const t0 = Date.now();
-  const tick = () => {
-    const s = Math.floor((Date.now() - t0) / 1000);
-    $("work-text").textContent = "Building your model... " + Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
-  };
-  tick();
-  timer = setInterval(tick, 1000);
-}
-function stopTimer() { clearInterval(timer); timer = null; }
-
-goBtn.addEventListener("click", async () => {
-  if (!currentFile) return;
-  goBtn.disabled = true;
-  setStatus("");
-  stage.dataset.state = "working";
-  startTimer();
+/* ---------- build ---------- */
+function formFor(engine) {
   const fd = new FormData();
   fd.append("file", currentFile);
+  fd.append("engine", engine);
+  fd.append("foreground_ratio", $("fg").value);
+  fd.append("mesh_detail", $("detail").value);
+  fd.append("remesh", $("remesh").value);
+  fd.append("texture_size", $("tex").value);
+  return fd;
+}
+
+goBtn.addEventListener("click", async () => {
+  if (!currentFile || busy) return;
+  busy = true; goBtn.disabled = true; setStatus("");
+  const engines = (cfg.mode !== "local" && $("compare").checked) ? ["sf3d", "triposr"] : [$("engine-sel").value || "auto"];
+  stage.dataset.state = "working";
+  $("work-lines").replaceChildren();
+  startClock();
   try {
-    const r = await fetch("/convert", { method: "POST", body: fd });
-    let d = {};
-    try { d = await r.json(); } catch (_) {}
-    if (!r.ok) throw new Error(d.detail || "The server could not build this model.");
-    $("viewer").src = d.model_url;
-    $("dl").href = d.model_url;
-    stage.dataset.state = "done";
-    setStatus("Done. Drag the model to rotate it.");
+    tracking = [];
+    for (const eng of engines) {
+      const r = await fetch("/api/jobs", { method: "POST", body: formFor(eng) });
+      let d = {}; try { d = await r.json(); } catch (_) {}
+      if (!r.ok) throw new Error(d.detail || "The server rejected this image.");
+      tracking.push(d.id);
+    }
+    poll();
   } catch (e) {
+    stopClock(); busy = false; goBtn.disabled = false;
     stage.dataset.state = "idle";
-    setStatus(e.message + " Try again or use a different image.", true);
-  } finally {
-    stopTimer();
-    goBtn.disabled = false;
+    setStatus(e.message, true);
   }
 });
 
+function startClock() {
+  t0 = Date.now();
+  const tick = () => { $("work-text").textContent = "Building your model... " + fmtTime((Date.now() - t0) / 1000); };
+  tick(); clearInterval(clock); clock = setInterval(tick, 1000);
+}
+function stopClock() { clearInterval(clock); clock = null; clearTimeout(pollTimer); pollTimer = null; }
+
+async function poll() {
+  try {
+    const jobs = await Promise.all(tracking.map(async id => {
+      const r = await fetch("/api/jobs/" + id);
+      if (!r.ok) throw new Error("job lookup failed");
+      return r.json();
+    }));
+    renderWorking(jobs);
+    if (jobs.every(j => j.status === "done" || j.status === "failed")) { finish(jobs); return; }
+  } catch (_) { /* network hiccup: keep polling */ }
+  pollTimer = setTimeout(poll, 2000);
+}
+
+function renderWorking(jobs) {
+  const box = $("work-lines"); box.replaceChildren();
+  jobs.forEach(j => {
+    const label = j.engine_label || j.engine;
+    let text;
+    if (j.status === "queued") text = "Waiting" + (j.ahead ? " (" + j.ahead + " ahead)" : "");
+    else if (j.status === "processing") text = j.stage;
+    else text = j.status === "done" ? "Done" : "Failed";
+    box.appendChild(el("div", "", (jobs.length > 1 ? label + ": " : "") + text));
+  });
+}
+
+function finish(jobs) {
+  stopClock(); busy = false; goBtn.disabled = !currentFile;
+  showResults(jobs);
+  const ok = jobs.filter(j => j.status === "done").length;
+  if (!ok) setStatus("The model could not be built. Read the message on the right, then try again.", true);
+  else setStatus(ok > 1 ? "Done. Drag either model to rotate it." : "Done. Drag the model to rotate it.");
+}
+
+/* ---------- results ---------- */
+function downloads(j) {
+  const dl = el("div", "dl");
+  [["glb", "Download GLB", true], ["stl", "STL for printing"], ["obj", "OBJ, shape only"]].forEach(([f, label, primary]) => {
+    const a = el("a", "tool" + (primary ? " primary" : ""), label);
+    a.href = "/api/jobs/" + j.id + "/download/" + f;
+    dl.appendChild(a);
+  });
+  return dl;
+}
+
+function doneCard(j) {
+  const card = el("div", "card");
+  const view = el("div", "view");
+  const mv = document.createElement("model-viewer");
+  mv.setAttribute("camera-controls", ""); mv.setAttribute("auto-rotate", "");
+  mv.setAttribute("shadow-intensity", "1"); mv.setAttribute("exposure", "1.1");
+  mv.setAttribute("alt", "Generated 3D model");
+  mv.src = j.glb_url;
+  view.appendChild(mv);
+  const info = el("div", "info");
+  info.appendChild(el("div", "title", j.engine_label));
+  if (j.duration != null) info.appendChild(el("div", "meta", fmtTime(j.duration) + " to build"));
+  info.appendChild(el("div", "meta", fmtNum(j.vertices) + " vertices, " + fmtNum(j.faces) + " faces, " + fmtSize(j.size_kb)));
+  info.appendChild(downloads(j));
+  card.append(view, info);
+  return card;
+}
+
+function failedCard(j) {
+  const card = el("div", "card");
+  const view = el("div", "view");
+  const f = el("div", "fail");
+  f.append(el("b", "", (j.engine_label || "Engine") + " could not build this model"), el("span", "", j.error || "Unknown error."));
+  view.appendChild(f);
+  card.appendChild(view);
+  return card;
+}
+
+function showResults(jobs) {
+  const res = $("results"); res.replaceChildren();
+  res.style.setProperty("--n", jobs.length);
+  jobs.forEach(j => res.appendChild(j.status === "done" ? doneCard(j) : failedCard(j)));
+  stage.dataset.state = "done";
+}
+
 $("reset").addEventListener("click", () => {
   stage.dataset.state = "idle";
-  currentFile = null;
-  fileInput.value = "";
+  currentFile = null; fileInput.value = "";
   drop.classList.remove("has-image");
-  goBtn.disabled = true;
-  setStatus("");
+  goBtn.disabled = true; setStatus("");
 });
+
+/* ---------- history ---------- */
+async function loadHistory() {
+  const box = $("hist"); box.replaceChildren();
+  let jobs = [];
+  try { jobs = await (await fetch("/api/jobs")).json(); } catch (_) {}
+  $("hist-count").textContent = jobs.length ? jobs.length + (jobs.length === 1 ? " model" : " models") : "";
+  if (!jobs.length) { box.appendChild(el("p", "empty-hist", "No models yet. Build one on the Create tab.")); return; }
+  jobs.forEach(j => {
+    const c = el("div", "hcard");
+    const img = document.createElement("img"); img.src = j.thumb_url; img.alt = ""; img.loading = "lazy";
+    img.onerror = () => { img.style.visibility = "hidden"; };
+    const body = el("div", "hbody");
+    body.appendChild(el("div", "name", j.original_name || "image"));
+    body.appendChild(el("div", "meta", new Date(j.created * 1000).toLocaleString()));
+    if (j.status === "done") {
+      body.appendChild(el("div", "meta", j.engine_label + (j.duration != null ? ", " + fmtTime(j.duration) : "")));
+      body.appendChild(el("div", "meta", fmtNum(j.vertices) + " vertices, " + fmtNum(j.faces) + " faces"));
+    } else if (j.status === "failed") {
+      body.appendChild(el("div", "bad", j.error || "Failed"));
+    } else {
+      body.appendChild(el("div", "meta", j.stage || j.status));
+    }
+    const row = el("div", "dl");
+    if (j.status === "done") {
+      const open = el("button", "tool primary", "Open"); open.type = "button";
+      open.onclick = () => { showTab("create"); showResults([j]); setStatus(""); };
+      const glb = el("a", "tool", "GLB"); glb.href = "/api/jobs/" + j.id + "/download/glb";
+      row.append(open, glb);
+    }
+    const del = el("button", "tool danger", "Delete"); del.type = "button";
+    del.onclick = async () => {
+      if (!confirm("Delete this model and its files?")) return;
+      await fetch("/api/jobs/" + j.id, { method: "DELETE" });
+      loadHistory();
+    };
+    row.appendChild(del);
+    body.appendChild(row);
+    c.append(img, body);
+    box.appendChild(c);
+  });
+}
+
+loadConfig();
 </script>
 </body>
 </html>

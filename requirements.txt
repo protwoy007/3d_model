@@ -3,3 +3,5 @@ uvicorn
 python-multipart
 gradio_client
 pillow
+trimesh
+numpy

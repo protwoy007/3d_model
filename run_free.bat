@@ -14,6 +14,8 @@ if errorlevel 1 goto no_python
 
 rem ---- 2. Project files ----
 if not exist main.py goto missing_files
+if not exist engines.py goto missing_files
+if not exist store.py goto missing_files
 if not exist requirements.txt goto missing_files
 if not exist static\index.html goto missing_files
 if not exist outputs mkdir outputs
@@ -27,12 +29,12 @@ if errorlevel 1 goto fail_venv
 call venv\Scripts\activate.bat
 
 rem ---- 4. Packages (first run only) ----
-if exist venv\.deps_free_ok goto deps_ok
+if exist venv\.deps_free_v2_ok goto deps_ok
 echo Installing packages. This needs internet and runs only once...
 python -m pip install --upgrade pip
 pip install -r requirements.txt
 if errorlevel 1 goto fail_pip
-echo ok> venv\.deps_free_ok
+echo ok> venv\.deps_free_v2_ok
 :deps_ok
 
 rem ---- 5. Hugging Face token (optional but recommended) ----
@@ -66,7 +68,7 @@ pause
 exit /b 1
 
 :missing_files
-echo [ERROR] Project files are missing. Keep this file next to main.py, requirements.txt and the static folder.
+echo [ERROR] Project files are missing. Keep this file next to main.py, engines.py, store.py, requirements.txt and the static folder.
 pause
 exit /b 1
 
