@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>img23d: photo to 3D model</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
+<script type="module" src="https://cdnjs.cloudflare.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
+<style>
+  :root {
+    --bench: #E5E7E2;
+    --paper: #F6F6F2;
+    --ink: #22302B;
+    --muted: #5E6B65;
+    --mat: #2F6B57;
+    --mat-line: #3F7D68;
+    --tape: #F2C230;
+    --danger: #A6261D;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    font-family: "Bricolage Grotesque", system-ui, -apple-system, "Segoe UI", sans-serif;
+    background: var(--bench);
+    color: var(--ink);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    line-height: 1.5;
+  }
+  header, main, footer { width: 100%; max-width: 1180px; margin: 0 auto; padding-left: 24px; padding-right: 24px; }
+  header { padding-top: 22px; padding-bottom: 6px; }
+  .brand { font-weight: 800; font-size: 1.35rem; letter-spacing: -0.02em; }
+  .brand span { color: var(--mat); }
+
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 360px 1fr;
+    gap: 28px;
+    padding-top: 18px;
+    padding-bottom: 32px;
+    align-items: start;
+  }
+
+  .panel h1 {
+    font-size: clamp(2rem, 3.4vw, 2.8rem);
+    line-height: 1.04;
+    letter-spacing: -0.03em;
+    font-weight: 800;
+    margin: 6px 0 12px;
+  }
+  .panel p.lead { margin: 0 0 22px; color: var(--muted); max-width: 34ch; }
+
+  .drop {
+    display: block;
+    position: relative;
+    background: var(--paper);
+    border: 2px dashed #A9B1AB;
+    border-radius: 16px;
+    min-height: 190px;
+    cursor: pointer;
+    overflow: hidden;
+    transition: border-color .15s, background .15s;
+  }
+  .drop:hover, .drop.over { border-color: var(--mat); background: #fff; }
+  .drop:focus-within { outline: 3px solid var(--tape); outline-offset: 3px; }
+  .drop input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+  .drop .hint {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 4px; padding: 20px; text-align: center; pointer-events: none;
+  }
+  .drop .hint strong { font-size: 1.05rem; }
+  .drop .hint span { color: var(--muted); font-size: .92rem; }
+  .drop img { display: none; width: 100%; height: 190px; object-fit: contain; background: var(--paper); }
+  .drop.has-image img { display: block; }
+  .drop.has-image .hint { display: none; }
+
+  button {
+    font: inherit; cursor: pointer; border: 0;
+  }
+  .go {
+    margin-top: 14px; width: 100%;
+    background: var(--tape); color: var(--ink);
+    font-weight: 800; font-size: 1.05rem;
+    padding: 14px 18px; border-radius: 12px;
+    transition: transform .08s, filter .15s;
+  }
+  .go:hover:not(:disabled) { filter: brightness(1.05); }
+  .go:active:not(:disabled) { transform: translateY(1px); }
+  .go:disabled { background: #D6D9D2; color: #8A948E; cursor: not-allowed; }
+  .go:focus-visible, .tool:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
+
+  .status { min-height: 1.5em; margin: 12px 2px 0; font-size: .95rem; color: var(--muted); }
+  .status.error { color: var(--danger); font-weight: 600; }
+  .engine { margin: 18px 2px 0; font-size: .85rem; color: var(--muted); }
+
+  .stage {
+    position: relative;
+    min-height: 600px;
+    border-radius: 22px;
+    overflow: hidden;
+    background-color: var(--mat);
+    background-image:
+      linear-gradient(rgba(255,255,255,.22) 1.5px, transparent 1.5px),
+      linear-gradient(90deg, rgba(255,255,255,.22) 1.5px, transparent 1.5px),
+      linear-gradient(var(--mat-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--mat-line) 1px, transparent 1px);
+    background-size: 160px 160px, 160px 160px, 32px 32px, 32px 32px;
+    box-shadow: 0 0 0 6px var(--paper), 0 0 0 7px #C9CDC6;
+  }
+  .layer { position: absolute; inset: 0; display: none; }
+  .stage[data-state="idle"] #empty,
+  .stage[data-state="working"] #working,
+  .stage[data-state="done"] #viewer-wrap { display: flex; }
+
+  #empty {
+    align-items: center; justify-content: center; text-align: center;
+    color: #EAF2EE; padding: 24px;
+  }
+  #empty p { margin: 0; font-size: 1.25rem; font-weight: 600; max-width: 22ch; }
+
+  #working { align-items: center; justify-content: center; flex-direction: column; gap: 16px; }
+  .shot { position: relative; width: min(60%, 340px); aspect-ratio: 1; background: var(--paper); border-radius: 14px; overflow: hidden; }
+  .shot img { width: 100%; height: 100%; object-fit: contain; }
+  .scan {
+    position: absolute; left: 0; right: 0; height: 4px; background: var(--tape);
+    box-shadow: 0 0 18px 4px rgba(242,194,48,.7);
+    animation: scan 1.8s ease-in-out infinite alternate;
+  }
+  @keyframes scan { from { top: 0; } to { top: calc(100% - 4px); } }
+  .work-text { color: #EAF2EE; font-weight: 600; font-size: 1.05rem; }
+
+  #viewer-wrap { align-items: stretch; }
+  model-viewer { width: 100%; height: 100%; min-height: 600px; --poster-color: transparent; background: transparent; }
+  .tools { position: absolute; right: 16px; bottom: 16px; display: flex; gap: 10px; }
+  .tool {
+    background: var(--paper); color: var(--ink);
+    padding: 10px 16px; border-radius: 10px; font-weight: 600; font-size: .95rem;
+    text-decoration: none; display: inline-block;
+  }
+  .tool.primary { background: var(--tape); font-weight: 800; }
+
+  footer { padding-top: 14px; padding-bottom: 26px; color: var(--muted); font-size: .9rem; }
+
+  @media (max-width: 860px) {
+    main { grid-template-columns: 1fr; }
+    .stage { min-height: 460px; }
+    model-viewer { min-height: 460px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .scan { animation: none; top: 50%; }
+  }
+</style>
+</head>
+<body>
+  <header><div class="brand">img<span>23d</span></div></header>
+
+  <main>
+    <section class="panel">
+      <h1>Turn one photo into a 3D model</h1>
+      <p class="lead">Use a single object on a plain background. Most models take 30 to 90 seconds.</p>
+
+      <label class="drop" id="drop">
+        <input type="file" id="file" accept="image/png,image/jpeg,image/webp">
+        <div class="hint"><strong>Drop an image here</strong><span>or click to choose a file (PNG, JPG, WebP)</span></div>
+        <img id="preview" alt="Selected image preview">
+      </label>
+
+      <button class="go" id="go" disabled>Build 3D model</button>
+      <p class="status" id="status" role="status" aria-live="polite"></p>
+      <p class="engine" id="engine"></p>
+    </section>
+
+    <section class="stage" id="stage" data-state="idle" aria-label="3D model preview">
+      <div class="layer" id="empty"><p>Your 3D model will appear here</p></div>
+
+      <div class="layer" id="working">
+        <div class="shot"><img id="shot" alt=""><div class="scan"></div></div>
+        <div class="work-text" id="work-text">Building your model... 0:00</div>
+      </div>
+
+      <div class="layer" id="viewer-wrap">
+        <model-viewer id="viewer" camera-controls auto-rotate shadow-intensity="1" exposure="1.1" alt="Generated 3D model"></model-viewer>
+        <div class="tools">
+          <button class="tool" id="reset" type="button">New image</button>
+          <a class="tool primary" id="dl" download="model.glb">Download GLB</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>Khaled 2026</footer>
+
+<script>
+const $ = id => document.getElementById(id);
+const stage = $("stage"), drop = $("drop"), fileInput = $("file"), goBtn = $("go"), statusEl = $("status");
+let currentFile = null, timer = null;
+
+fetch("/config").then(r => r.json()).then(c => {
+  $("engine").textContent = c.mode === "local" ? "Running on this computer's GPU." : "Running on a free Hugging Face GPU. It can be slow when busy.";
+}).catch(() => {});
+
+function setStatus(msg, isError) {
+  statusEl.textContent = msg || "";
+  statusEl.className = "status" + (isError ? " error" : "");
+}
+
+function setFile(f) {
+  if (!f) return;
+  if (!f.type.startsWith("image/")) { setStatus("Choose an image file (PNG, JPG or WebP).", true); return; }
+  if (f.size > 10 * 1024 * 1024) { setStatus("That image is over 10 MB. Choose a smaller one.", true); return; }
+  currentFile = f;
+  const url = URL.createObjectURL(f);
+  $("preview").src = url;
+  $("shot").src = url;
+  drop.classList.add("has-image");
+  goBtn.disabled = false;
+  setStatus("");
+}
+
+fileInput.addEventListener("change", () => setFile(fileInput.files[0]));
+["dragenter", "dragover"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add("over"); }));
+["dragleave", "drop"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove("over"); }));
+drop.addEventListener("drop", e => setFile(e.dataTransfer.files[0]));
+
+function startTimer() {
+  const t0 = Date.now();
+  const tick = () => {
+    const s = Math.floor((Date.now() - t0) / 1000);
+    $("work-text").textContent = "Building your model... " + Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
+  };
+  tick();
+  timer = setInterval(tick, 1000);
+}
+function stopTimer() { clearInterval(timer); timer = null; }
+
+goBtn.addEventListener("click", async () => {
+  if (!currentFile) return;
+  goBtn.disabled = true;
+  setStatus("");
+  stage.dataset.state = "working";
+  startTimer();
+  const fd = new FormData();
+  fd.append("file", currentFile);
+  try {
+    const r = await fetch("/convert", { method: "POST", body: fd });
+    let d = {};
+    try { d = await r.json(); } catch (_) {}
+    if (!r.ok) throw new Error(d.detail || "The server could not build this model.");
+    $("viewer").src = d.model_url;
+    $("dl").href = d.model_url;
+    stage.dataset.state = "done";
+    setStatus("Done. Drag the model to rotate it.");
+  } catch (e) {
+    stage.dataset.state = "idle";
+    setStatus(e.message + " Try again or use a different image.", true);
+  } finally {
+    stopTimer();
+    goBtn.disabled = false;
+  }
+});
+
+$("reset").addEventListener("click", () => {
+  stage.dataset.state = "idle";
+  currentFile = null;
+  fileInput.value = "";
+  drop.classList.remove("has-image");
+  goBtn.disabled = true;
+  setStatus("");
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+venv/
+venv-gpu/
+outputs/
+TripoSR/
+__pycache__/
+*.pyc
+.hf_token
