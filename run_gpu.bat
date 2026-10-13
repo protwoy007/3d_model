@@ -141,9 +141,18 @@ pip install -r TripoSR\requirements_img23d.txt
 if errorlevel 1 goto fail_pip
 
 echo.
+pip install scikit-build-core
+if errorlevel 1 goto fail_pip
+
+echo.
 echo Compiling torchmcubes. This takes a few minutes...
 pip install --no-build-isolation git+https://github.com/tatsy/torchmcubes.git
 if errorlevel 1 goto fail_mcubes
+
+echo.
+echo Pinning numpy 1.x and a matching OpenCV...
+pip install "numpy<2" "opencv-python-headless<4.11"
+if errorlevel 1 goto fail_pip
 
 echo ok> "%VENV%\.deps_ok"
 echo.

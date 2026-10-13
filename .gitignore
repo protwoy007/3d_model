@@ -6,3 +6,4 @@ TripoSR/
 __pycache__/
 *.pyc
 .hf_token
+log.txt
