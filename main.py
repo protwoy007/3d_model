@@ -11,11 +11,16 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from PIL import Image, ImageOps
 
+import capture
 import engines
+import photogrammetry
 import store
 
 MODE = engines.MODE
 MAX_UPLOAD = 10 * 1024 * 1024
+MAX_PHOTO = 15 * 1024 * 1024      # per photo in multi-photo mode
+MIN_PHOTOS = photogrammetry.MIN_VIEWS
+MAX_PHOTOS = photogrammetry.MAX_VIEWS
 
 os.makedirs("outputs", exist_ok=True)
 os.makedirs("static", exist_ok=True)
@@ -63,29 +68,71 @@ def process(job_id, opts):
         return
     store.update_job(job_id, status="processing", stage="Starting", started=time.time())
 
-    def progress(msg):
-        store.update_job(job_id, stage=msg)
+    def progress(msg, pct=None):
+        if pct is None:
+            store.update_job(job_id, stage=msg)
+        else:
+            store.update_job(job_id, stage=msg, progress=int(pct))
 
     try:
-        src, used = engines.run(job["engine"], f"outputs/{job_id}.png", opts, progress)
-        if not store.get_job(job_id):  # deleted while running
-            return
         glb = f"outputs/{job_id}.glb"
-        shutil.copy(src, glb)
+        extra = {}
+        if job["kind"] == "multi":
+            views_dir = f"outputs/{job_id}_views"
+            paths = sorted(
+                os.path.join(views_dir, f) for f in os.listdir(views_dir) if f.lower().endswith(".jpg")
+            )
+            info = photogrammetry.reconstruct(
+                paths,
+                glb,
+                f"outputs/{job_id}_work",
+                quality=opts.get("quality", "standard"),
+                colors=bool(opts.get("colors", True)),
+                progress=progress,
+            )
+            used = "photogrammetry"
+            extra["note"] = info["note"]
+        else:
+            src, used = engines.run(job["engine"], f"outputs/{job_id}.png", opts, progress)
+            if not store.get_job(job_id):  # deleted while running
+                return
+            shutil.copy(src, glb)
+        if not store.get_job(job_id):
+            return
         stats = mesh_stats(glb)
         store.update_job(
-            job_id, status="done", stage="Done", engine_used=used, finished=time.time(), **stats
+            job_id, status="done", stage="Done", engine_used=used, finished=time.time(),
+            progress=100, **stats, **extra
         )
     except Exception as e:  # noqa: BLE001
         print("job failed:", repr(e))
-        store.update_job(job_id, status="failed", stage="Failed", error=str(e), finished=time.time())
+        shutil.rmtree(f"outputs/{job_id}_work", ignore_errors=True)
+        msg = str(e) if isinstance(e, (photogrammetry.ReconstructionError, engines.EngineError)) else (str(e) or "Unexpected error.")
+        store.update_job(job_id, status="failed", stage="Failed", error=msg[:400], finished=time.time())
 
 
 # ---------- API ----------
+_mv_status = None
+
+
+def photogrammetry_status():
+    global _mv_status
+    if _mv_status is None or not _mv_status[0]:
+        _mv_status = photogrammetry.available()
+    return _mv_status
+
+
 @app.get("/config")
 @app.get("/api/config")
 def config():
-    return {"mode": MODE, "engines": engines.available(), "token": bool(engines.HF_TOKEN)}
+    ok, reason = photogrammetry_status()
+    return {
+        "mode": MODE,
+        "engines": engines.available(),
+        "token": bool(engines.HF_TOKEN),
+        "multiview": {"available": ok, "reason": reason, "min": MIN_PHOTOS, "max": MAX_PHOTOS},
+        "capture": dict(zip(("available", "reason"), capture.status())),
+    }
 
 
 @app.post("/api/jobs")
@@ -134,6 +181,122 @@ def create_job(
     store.create_job(job_id, file.filename or "image", engine, json.dumps(opts))
     executor.submit(process, job_id, opts)
     return {"id": job_id}
+
+
+def queue_multi(prepared, quality, colors):
+    """Save the photos of one object and queue a reconstruction. Returns the job id."""
+    job_id = uuid.uuid4().hex[:12]
+    views = f"outputs/{job_id}_views"
+    os.makedirs(views, exist_ok=True)
+    for i, img in enumerate(prepared):
+        img.thumbnail((1600, 1600))
+        img.save(f"{views}/{i:03d}.jpg", quality=93)
+    thumb = prepared[0].copy()
+    thumb.thumbnail((360, 360))
+    thumb.save(f"outputs/{job_id}_thumb.jpg", quality=85)
+
+    opts = {"quality": quality, "colors": bool(colors)}
+    store.create_job(
+        job_id, f"{len(prepared)} photos", "photogrammetry", json.dumps(opts),
+        kind="multi", image_count=len(prepared),
+    )
+    executor.submit(process, job_id, opts)
+    return job_id
+
+
+@app.post("/api/jobs/multi")
+def create_multi_job(
+    files: list[UploadFile],
+    quality: str = Form("standard"),
+    colors: bool = Form(True),
+):
+    ok, reason = photogrammetry_status()
+    if not ok:
+        raise HTTPException(
+            400,
+            "Multi-photo mode needs extra packages (" + reason + "). "
+            "Close the app, run the launcher again to install them, then retry.",
+        )
+    if len(files) < MIN_PHOTOS:
+        raise HTTPException(400, f"Add at least {MIN_PHOTOS} photos. 20 to 60 gives the best result.")
+    if len(files) > MAX_PHOTOS:
+        raise HTTPException(400, f"Too many photos. The limit is {MAX_PHOTOS}.")
+    if quality not in photogrammetry.GRID:
+        quality = "standard"
+
+    prepared = []
+    for n, f in enumerate(files, start=1):
+        data = f.file.read(MAX_PHOTO + 1)
+        label = f"Photo {n} ({f.filename or 'unnamed'})"
+        if len(data) > MAX_PHOTO:
+            raise HTTPException(413, f"{label} is over 15 MB.")
+        try:
+            img = Image.open(io.BytesIO(data))
+            img.load()
+            img = ImageOps.exif_transpose(img).convert("RGB")
+        except Exception:
+            raise HTTPException(400, f"{label} is not a valid image.")
+        if min(img.size) < 320:
+            raise HTTPException(400, f"{label} is too small. Use photos at least 640 pixels wide.")
+        prepared.append(img)
+
+    return {"id": queue_multi(prepared, quality, colors)}
+
+
+# ---------- live capture from a phone (PC side) ----------
+def _capture_session(sid):
+    s = capture.get(sid)
+    if not s:
+        raise HTTPException(404, "This live capture session no longer exists.")
+    return s
+
+
+@app.post("/api/capture")
+def capture_start():
+    ok, reason = capture.status()
+    if not ok:
+        raise HTTPException(400, reason)
+    ok, reason = photogrammetry_status()
+    if not ok:
+        raise HTTPException(400, "Many-photo mode needs extra packages (" + reason + "). Run the launcher again to install them.")
+    return capture.pc_info(capture.create())
+
+
+@app.get("/api/capture/{sid}")
+def capture_state(sid: str):
+    return capture.state(_capture_session(sid), for_pc=True)
+
+
+@app.delete("/api/capture/{sid}/photos/{n}")
+def capture_delete_photo(sid: str, n: int):
+    s = _capture_session(sid)
+    if not capture.delete_photo(s, n):
+        raise HTTPException(404, "Photo not found.")
+    return capture.state(s, for_pc=True)
+
+
+@app.post("/api/capture/{sid}/build")
+def capture_build(sid: str, quality: str = Form("standard"), colors: bool = Form(True)):
+    s = _capture_session(sid)
+    paths = capture.photo_paths(s)
+    if len(paths) < MIN_PHOTOS:
+        raise HTTPException(400, f"Take at least {MIN_PHOTOS} photos first. 20 to 60 gives the best result.")
+    if quality not in photogrammetry.GRID:
+        quality = "standard"
+    prepared = []
+    for p in paths:
+        img = Image.open(p)
+        img.load()
+        prepared.append(img.convert("RGB"))
+    job_id = queue_multi(prepared, quality, colors)
+    capture.mark_built(s)
+    return {"id": job_id}
+
+
+@app.delete("/api/capture/{sid}")
+def capture_cancel(sid: str):
+    capture.remove(sid)
+    return {"ok": True}
 
 
 @app.get("/api/jobs")

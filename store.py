@@ -1,4 +1,5 @@
 import os
+import shutil
 import sqlite3
 import threading
 import time
@@ -10,8 +11,16 @@ _lock = threading.Lock()
 
 ALLOWED = {
     "engine_used", "status", "stage", "error", "started", "finished",
-    "vertices", "faces", "size_kb",
+    "vertices", "faces", "size_kb", "progress", "note",
 }
+
+# columns added after the first release; added to older databases on startup
+MIGRATIONS = [
+    ("kind", "TEXT DEFAULT 'single'"),
+    ("image_count", "INTEGER DEFAULT 1"),
+    ("progress", "INTEGER"),
+    ("note", "TEXT"),
+]
 
 
 def _connect():
@@ -41,6 +50,10 @@ def init():
                 size_kb INTEGER
             )"""
         )
+        have = {r["name"] for r in c.execute("PRAGMA table_info(jobs)").fetchall()}
+        for name, decl in MIGRATIONS:
+            if name not in have:
+                c.execute(f"ALTER TABLE jobs ADD COLUMN {name} {decl}")
         c.execute(
             "UPDATE jobs SET status='failed', stage='Failed', "
             "error='The server restarted before this job finished.' "
@@ -49,12 +62,12 @@ def init():
         c.commit()
 
 
-def create_job(job_id, original_name, engine, options_json):
+def create_job(job_id, original_name, engine, options_json, kind="single", image_count=1):
     with _lock, closing(_connect()) as c:
         c.execute(
-            "INSERT INTO jobs(id, original_name, engine, status, stage, options, created) "
-            "VALUES(?,?,?,?,?,?,?)",
-            (job_id, original_name, engine, "queued", "Waiting", options_json, time.time()),
+            "INSERT INTO jobs(id, original_name, engine, status, stage, options, created, kind, image_count) "
+            "VALUES(?,?,?,?,?,?,?,?,?)",
+            (job_id, original_name, engine, "queued", "Waiting", options_json, time.time(), kind, image_count),
         )
         c.commit()
 
@@ -103,6 +116,9 @@ def delete_job(job_id):
         c.commit()
     for p in glob.glob(os.path.join("outputs", f"{job_id}*")):
         try:
-            os.remove(p)
+            if os.path.isdir(p):
+                shutil.rmtree(p, ignore_errors=True)
+            else:
+                os.remove(p)
         except OSError:
             pass

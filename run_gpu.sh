@@ -13,7 +13,7 @@ echo " img23d - GPU mode (runs on your NVIDIA GPU)"
 echo "=================================================="
 
 # 0. Project files
-for f in main.py engines.py store.py local_triposr.py requirements-gpu.txt static/index.html; do
+for f in main.py engines.py store.py photogrammetry.py capture.py certs.py serve.py local_triposr.py requirements-gpu.txt static/index.html; do
   [ -f "$f" ] || { echo "[ERROR] Missing $f"; exit 1; }
 done
 mkdir -p outputs
@@ -104,6 +104,16 @@ if ! python -c 'import torch,sys; sys.exit(0 if torch.cuda.is_available() else 1
   exit 1
 fi
 
+# many-photo and live-capture packages (optional, does not stop the app)
+if [ ! -f "$VENV/.deps_mv2_ok" ]; then
+  echo "Installing many-photo and live-capture packages. This can take a few minutes..."
+  if pip install -r requirements-multiview.txt "numpy<2" "opencv-python-headless<4.11"; then
+    echo ok > "$VENV/.deps_mv2_ok"
+  else
+    echo "[WARNING] The many-photo packages could not be installed. One-photo mode still works."
+  fi
+fi
+
 export MODE=local
 echo
 echo "Starting img23d at http://127.0.0.1:8000  (Ctrl+C to stop)"
@@ -117,4 +127,4 @@ echo "The first start downloads the model weights. This can take a few minutes."
     sleep 2
   done
 ) &
-exec python -m uvicorn main:app --host 127.0.0.1 --port 8000
+exec python serve.py

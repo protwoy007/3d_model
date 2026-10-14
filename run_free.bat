@@ -17,6 +17,9 @@ if not exist main.py goto missing_files
 if not exist engines.py goto missing_files
 if not exist store.py goto missing_files
 if not exist requirements.txt goto missing_files
+if not exist photogrammetry.py goto missing_files
+if not exist capture.py goto missing_files
+if not exist serve.py goto missing_files
 if not exist static\index.html goto missing_files
 if not exist outputs mkdir outputs
 
@@ -37,6 +40,20 @@ if errorlevel 1 goto fail_pip
 echo ok> venv\.deps_free_v2_ok
 :deps_ok
 
+rem ---- 4b. Packages for many-photo mode (optional, does not stop the app) ----
+if exist venv\.deps_mv2_ok goto mv_ok
+echo.
+echo Installing many-photo and live-capture packages. This can take a few minutes...
+pip install -r requirements-multiview.txt
+if errorlevel 1 goto mv_failed
+echo ok> venv\.deps_mv2_ok
+goto mv_ok
+:mv_failed
+echo.
+echo [WARNING] The many-photo packages could not be installed. One-photo mode still works.
+echo Python 3.11 or 3.12 gives the best chance. See Troubleshooting in README.md.
+:mv_ok
+
 rem ---- 5. Hugging Face token (optional but recommended) ----
 if not defined HF_TOKEN if exist .hf_token set /p HF_TOKEN=<.hf_token
 if defined HF_TOKEN goto token_ok
@@ -54,7 +71,7 @@ echo Starting img23d at http://127.0.0.1:8000
 echo Keep this window open. Close it to stop the server.
 echo.
 start "" /min powershell -NoProfile -WindowStyle Hidden -Command "for($i=0;$i -lt 300;$i++){try{Invoke-WebRequest -UseBasicParsing -TimeoutSec 2 http://127.0.0.1:8000/config | Out-Null;Start-Process http://127.0.0.1:8000;break}catch{Start-Sleep -Seconds 2}}"
-python -m uvicorn main:app --host 127.0.0.1 --port 8000
+python serve.py
 echo.
 echo Server stopped.
 pause
@@ -68,7 +85,7 @@ pause
 exit /b 1
 
 :missing_files
-echo [ERROR] Project files are missing. Keep this file next to main.py, engines.py, store.py, requirements.txt and the static folder.
+echo [ERROR] Project files are missing. Keep this file next to main.py, engines.py, store.py, photogrammetry.py, capture.py, certs.py, serve.py, requirements.txt and the static folder.
 pause
 exit /b 1
 

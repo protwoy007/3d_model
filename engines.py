@@ -15,6 +15,7 @@ LABELS = {
     "sf3d": "Stable Fast 3D",
     "triposr": "TripoSR",
     "local": "TripoSR on this GPU",
+    "photogrammetry": "Photogrammetry",
 }
 DETAIL = {"low": 160, "medium": 256, "high": 320}
 

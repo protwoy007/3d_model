@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#22302B">
+<title>img23d capture</title>
+<style>
+  :root { --ink: #22302B; --paper: #F6F6F2; --tape: #F2C230; --red: #D64541; --green: #2EA06E; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #000; color: #fff; overflow: hidden; touch-action: manipulation;
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif; -webkit-tap-highlight-color: transparent; }
+  [hidden] { display: none !important; }
+  video { position: fixed; inset: 0; width: 100%; height: 100%; object-fit: cover; background: #111; }
+  #tint { position: fixed; inset: 0; pointer-events: none; transition: box-shadow .2s;
+    box-shadow: inset 0 0 0 0 transparent; }
+  #tint.need { box-shadow: inset 0 0 0 8px var(--red), inset 0 0 70px 14px rgba(214,69,65,.65); }
+  #tint.done { box-shadow: inset 0 0 0 8px var(--green), inset 0 0 70px 14px rgba(46,160,110,.65); }
+  #tint.flash { box-shadow: inset 0 0 0 14px #fff, inset 0 0 90px 30px rgba(255,255,255,.7); }
+  #reticle { position: fixed; left: 50%; top: 50%; width: 46px; height: 46px; margin: -23px 0 0 -23px; pointer-events: none;
+    border: 2px solid rgba(255,255,255,.75); border-radius: 50%; }
+  #reticle::after { content: ""; position: absolute; left: 50%; top: 50%; width: 6px; height: 6px; margin: -3px 0 0 -3px; background: #fff; border-radius: 50%; }
+
+  .hud { position: fixed; left: 0; right: 0; padding: 10px 14px; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
+  #top { top: 0; padding-top: calc(10px + env(safe-area-inset-top)); background: linear-gradient(rgba(0,0,0,.65), rgba(0,0,0,0)); }
+  #count { font-weight: 800; font-size: 1.1rem; }
+  #area { display: inline-block; align-self: flex-start; font-weight: 800; font-size: .95rem; padding: 3px 12px; border-radius: 999px; background: #444; }
+  #area.need { background: var(--red); }
+  #area.done { background: var(--green); }
+  #guide { font-weight: 600; font-size: 1.05rem; text-shadow: 0 1px 4px #000; min-height: 1.4em; }
+  #bottom { bottom: 0; padding-bottom: calc(14px + env(safe-area-inset-bottom)); flex-direction: row; align-items: flex-end; justify-content: space-between;
+    background: linear-gradient(rgba(0,0,0,0), rgba(0,0,0,.7)); pointer-events: none; }
+  #bottom > * { pointer-events: auto; }
+  canvas#dome { width: 150px; height: 150px; }
+  .btns { display: flex; flex-direction: column; gap: 10px; align-items: flex-end; }
+  button { font: inherit; border: 0; cursor: pointer; border-radius: 14px; font-weight: 800; }
+  #shutter { width: 74px; height: 74px; border-radius: 50%; background: #fff; border: 6px solid rgba(255,255,255,.5); background-clip: padding-box; }
+  #shutter:active { transform: scale(.94); }
+  #finish { background: var(--tape); color: var(--ink); padding: 12px 22px; font-size: 1rem; }
+  #finish:disabled { background: #666; color: #aaa; }
+  button:focus-visible { outline: 3px solid var(--tape); outline-offset: 2px; }
+
+  .overlay { position: fixed; inset: 0; background: rgba(34,48,43,.96); display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 14px; padding: 28px; text-align: center; padding-top: calc(28px + env(safe-area-inset-top)); }
+  .overlay h1 { margin: 0; font-size: 1.7rem; letter-spacing: -0.02em; }
+  .overlay p { margin: 0; max-width: 34ch; color: #D9E3DD; line-height: 1.45; }
+  .overlay ol { text-align: left; margin: 0; padding-left: 22px; max-width: 34ch; color: #D9E3DD; line-height: 1.45; }
+  .overlay ol li { margin-bottom: 6px; }
+  .overlay .big { background: var(--tape); color: var(--ink); padding: 15px 30px; font-size: 1.1rem; }
+  .overlay .err { color: #FFB3AE; font-weight: 600; }
+  #calibrate { background: rgba(34,48,43,.0); justify-content: flex-end; padding-bottom: calc(110px + env(safe-area-inset-bottom)); pointer-events: none; }
+  #calibrate .card { background: rgba(34,48,43,.92); border-radius: 16px; padding: 18px; display: flex; flex-direction: column; gap: 12px; align-items: center; pointer-events: auto; }
+</style>
+</head>
+<body>
+  <video id="video" playsinline muted autoplay></video>
+  <div id="tint"></div>
+  <div id="reticle" hidden></div>
+
+  <div class="hud" id="top" hidden>
+    <div id="count">0 of 54 areas</div>
+    <div id="area">Needed</div>
+    <div id="guide"></div>
+  </div>
+
+  <div class="hud" id="bottom" hidden>
+    <canvas id="dome" width="300" height="300" aria-label="Coverage map"></canvas>
+    <div class="btns">
+      <button id="shutter" type="button" aria-label="Take a photo now"></button>
+      <button id="finish" type="button" disabled>Finish</button>
+    </div>
+  </div>
+
+  <div class="overlay" id="intro">
+    <h1>Capture your object</h1>
+    <ol>
+      <li>Put the object on a surface you can walk around. Do not spin it.</li>
+      <li>Hold the phone upright and point it at the middle of the object.</li>
+      <li>Walk slowly around it. Red areas on the map still need a photo and green ones are done. Photos are taken for you.</li>
+    </ol>
+    <button class="big" id="start" type="button">Start camera</button>
+    <p class="err" id="intro-err" hidden></p>
+  </div>
+
+  <div class="overlay" id="calibrate" hidden>
+    <div class="card">
+      <p>Stand where you want to begin, point the camera at the middle of the object, and hold still.</p>
+      <button class="big" id="here" type="button">Start here</button>
+    </div>
+  </div>
+
+  <div class="overlay" id="end" hidden>
+    <h1 id="end-title">All sent</h1>
+    <p id="end-text">Go back to your computer and press Build.</p>
+    <button class="big" id="more" type="button">Take more photos</button>
+  </div>
+
+<script src="/c/__TOKEN__/dome.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const TOKEN = location.pathname.split("/")[2];
+const API = "/c/" + TOKEN + "/api/";
+const D2R = Math.PI / 180;
+
+let state = null, cells = Dome.emptyCells(), count = 0, maxPhotos = 80, minPhotos = 4;
+let phase = "intro";                       // intro | calibrate | capture | end
+let H0 = 0, heading = 0, elev = 0, hasSensor = false;
+let lastF = null, lastT = 0, speed = 99;
+let lastCapture = 0, busyShot = false, pending = 0, sharpHistory = [], lastSharpAt = 0, sharpOK = false;
+const video = $("video"), work = document.createElement("canvas"), small = document.createElement("canvas");
+
+async function api(path, opts) {
+  const r = await fetch(API + path, opts);
+  let d = {}; try { d = await r.json(); } catch (_) {}
+  if (!r.ok) throw new Error(d.detail || "Request failed");
+  return d;
+}
+function applyState(s) {
+  state = s; cells = s.cells; count = s.count; maxPhotos = s.max; minPhotos = s.min;
+  render();
+}
+
+/* ---------- start ---------- */
+$("start").onclick = async () => {
+  const err = $("intro-err"); err.hidden = true;
+  try {
+    // iOS asks for motion access, and only inside a tap, so ask first
+    if (typeof DeviceOrientationEvent !== "undefined" && typeof DeviceOrientationEvent.requestPermission === "function") {
+      const r = await DeviceOrientationEvent.requestPermission();
+      if (r !== "granted") throw new Error("Motion access was refused. Allow Motion & Orientation for this site in Safari settings, then reload.");
+    }
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error("The camera is not available here. Open this page over HTTPS in Chrome or Safari and accept the security warning.");
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" }, width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: false });
+    video.srcObject = stream;
+    window.addEventListener("deviceorientation", onOrient);
+    await waitForSensor();
+    try { if (navigator.wakeLock) await navigator.wakeLock.request("screen"); } catch (_) {}
+    applyState(await api("state"));
+    $("intro").hidden = true; $("calibrate").hidden = false; phase = "calibrate";
+    setInterval(() => api("state").then(applyState).catch(() => {}), 4000);
+  } catch (e) {
+    err.textContent = e.name === "NotAllowedError" ? "Camera access was refused. Allow the camera for this site, then reload." : e.message;
+    err.hidden = false;
+  }
+};
+function waitForSensor() {
+  return new Promise((res, rej) => {
+    const t0 = Date.now();
+    const tick = () => hasSensor ? res() : Date.now() - t0 > 3500 ? rej(new Error("No motion sensor data. Use Chrome or Safari on a phone and allow motion access.")) : setTimeout(tick, 100);
+    tick();
+  });
+}
+$("here").onclick = () => {
+  H0 = heading; phase = "capture";
+  $("calibrate").hidden = true; $("top").hidden = false; $("bottom").hidden = false; $("reticle").hidden = false;
+  render();
+};
+
+/* ---------- sensors ---------- */
+function onOrient(e) {
+  if (e.alpha == null || e.beta == null) return;
+  const now = performance.now();
+  const f = Dome.viewFromOrientation(e.alpha, e.beta, e.gamma || 0);
+  if (lastF) {
+    const dot = Math.max(-1, Math.min(1, f.x * lastF.x + f.y * lastF.y + f.z * lastF.z));
+    const dt = (now - lastT) / 1000;
+    if (dt > 0) speed = 0.7 * speed + 0.3 * (Math.acos(dot) / D2R / dt);
+  }
+  lastF = f; lastT = now;
+  heading = Dome.headingOf(f); elev = Dome.elevationOfCamera(f);
+  hasSensor = true;
+  if (phase === "capture") step();
+}
+const azimuth = () => (heading - H0 + 360) % 360;
+
+/* ---------- sharpness ---------- */
+function sharpness() {
+  const w = 160, h = Math.max(8, Math.round(160 * (video.videoHeight || 3) / (video.videoWidth || 4)));
+  small.width = w; small.height = h;
+  const c = small.getContext("2d", { willReadFrequently: true });
+  c.drawImage(video, 0, 0, w, h);
+  const d = c.getImageData(0, 0, w, h).data, g = new Float32Array(w * h);
+  for (let i = 0; i < w * h; i++) g[i] = 0.299 * d[i * 4] + 0.587 * d[i * 4 + 1] + 0.114 * d[i * 4 + 2];
+  let sum = 0, sum2 = 0, n = 0;
+  for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++) {
+    const i = y * w + x, l = 4 * g[i] - g[i - 1] - g[i + 1] - g[i - w] - g[i + w];
+    sum += l; sum2 += l * l; n++;
+  }
+  const mean = sum / n; return sum2 / n - mean * mean;
+}
+function updateSharp(now) {
+  if (now - lastSharpAt < 150) return;
+  lastSharpAt = now;
+  let v = 0; try { v = sharpness(); } catch (_) { sharpOK = true; return; }
+  sharpHistory.push(v); if (sharpHistory.length > 30) sharpHistory.shift();
+  const best = Math.max(...sharpHistory);
+  sharpOK = v >= 8 && v >= 0.6 * best;
+}
+
+/* ---------- main loop ---------- */
+function step() {
+  const now = performance.now();
+  const cell = Dome.cellOf(azimuth(), elev);
+  render(cell);
+  if (busyShot || pending >= 3 || count >= maxPhotos) return;
+  if (cells[cell[0]][cell[1]] > 0) return;                 // this area is done
+  if (speed > 15 || now - lastCapture < 700) return;        // moving, or just took one
+  updateSharp(now);
+  if (sharpOK) shoot(false);
+}
+
+function render(cell) {
+  if (phase !== "capture") return;
+  cell = cell || Dome.cellOf(azimuth(), elev);
+  const need = cells[cell[0]][cell[1]] === 0;
+  const cov = Dome.coverage(cells);
+  $("count").textContent = cov.done + " of " + cov.total + " areas, " + count + " photos";
+  const a = $("area"); a.textContent = need ? "Needed here" : "Done here"; a.className = need ? "need" : "done";
+  const t = $("tint"); if (!t.classList.contains("flash")) t.className = need ? "need" : "done";
+  $("guide").textContent = speed > 15 && need ? "Hold steady" : Dome.guideText(cells, cell[0], azimuth());
+  Dome.drawDome($("dome"), cells, { current: cell, pointer: { az: azimuth(), el: elev }, start: true });
+  $("finish").disabled = count < minPhotos;
+}
+
+/* ---------- taking and sending photos ---------- */
+async function shoot(manual) {
+  if (busyShot || !video.videoWidth || count >= maxPhotos) return;
+  busyShot = true;
+  try {
+    const scale = Math.min(1, 1600 / Math.max(video.videoWidth, video.videoHeight));
+    work.width = Math.round(video.videoWidth * scale); work.height = Math.round(video.videoHeight * scale);
+    work.getContext("2d").drawImage(video, 0, 0, work.width, work.height);
+    const az = azimuth(), el = elev, cell = Dome.cellOf(az, el);
+    const blob = await new Promise(res => work.toBlob(res, "image/jpeg", 0.9));
+    if (!blob) return;
+    lastCapture = performance.now();
+    cells[cell[0]][cell[1]] += 1; count += 1;
+    flash();
+    upload({ blob, az, el, cell });
+    render(cell);
+  } finally { busyShot = false; }
+}
+function flash() {
+  const t = $("tint"); t.className = "flash";
+  if (navigator.vibrate) navigator.vibrate(25);
+  setTimeout(() => { t.className = ""; render(); }, 180);
+}
+async function upload(job, attempt) {
+  attempt = attempt || 1; if (attempt === 1) pending++;
+  const fd = new FormData();
+  fd.append("file", job.blob, "photo.jpg");
+  fd.append("az", job.az.toFixed(1)); fd.append("el", job.el.toFixed(1));
+  fd.append("ring", job.cell[0]); fd.append("sector", job.cell[1]);
+  try {
+    applyState(await api("photo", { method: "POST", body: fd }));
+    pending--;
+  } catch (e) {
+    if (attempt < 3) return setTimeout(() => upload(job, attempt + 1), 1000 * attempt);
+    pending--; cells[job.cell[0]][job.cell[1]] = Math.max(0, cells[job.cell[0]][job.cell[1]] - 1); count = Math.max(0, count - 1);
+    $("guide").textContent = "A photo did not reach the computer: " + e.message;
+    render();
+  }
+}
+$("shutter").onclick = () => { if (phase === "capture") shoot(true); };
+
+$("finish").onclick = async () => {
+  try {
+    await waitForUploads();
+    applyState(await api("finish", { method: "POST" }));
+    phase = "end"; $("top").hidden = true; $("bottom").hidden = true; $("reticle").hidden = true; $("tint").className = "";
+    $("end-title").textContent = "All sent";
+    $("end-text").textContent = count + " photos are on your computer. Go back to it and press Build.";
+    $("end").hidden = false;
+  } catch (e) { $("guide").textContent = e.message; }
+};
+$("more").onclick = () => { $("end").hidden = true; $("top").hidden = false; $("bottom").hidden = false; $("reticle").hidden = false; phase = "capture"; render(); };
+function waitForUploads() { return new Promise(res => { const t = () => pending <= 0 ? res() : setTimeout(t, 150); t(); }); }
+
+setInterval(() => { if (phase !== "intro") api("state").then(s => { if (s.built && phase !== "end") { phase = "end"; $("end-title").textContent = "Building"; $("end-text").textContent = "Your computer is building the model. You can close this page."; $("more").hidden = true; $("end").hidden = false; } }).catch(() => {}); }, 5000);
+</script>
+</body>
+</html>

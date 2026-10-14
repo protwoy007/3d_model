@@ -84,7 +84,7 @@
     background-size: 160px 160px, 160px 160px, 32px 32px, 32px 32px;
     box-shadow: 0 0 0 6px var(--paper), 0 0 0 7px #C9CDC6; }
   .layer { position: absolute; inset: 0; display: none; }
-  .stage[data-state="idle"] #empty, .stage[data-state="working"] #working, .stage[data-state="done"] #results { display: flex; }
+  .stage[data-state="idle"] #empty, .stage[data-state="working"] #working, .stage[data-state="done"] #results, .stage[data-state="live"] #live-stage { display: flex; }
 
   #empty { align-items: center; justify-content: center; text-align: center; color: #EAF2EE; padding: 24px; }
   #empty p { margin: 0; font-size: 1.25rem; font-weight: 600; max-width: 22ch; }
@@ -132,6 +132,45 @@
 
   footer { padding-top: 14px; padding-bottom: 26px; color: var(--muted); font-size: .9rem; }
 
+
+  .seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; background: var(--paper); padding: 4px; border-radius: 14px; margin: 0 0 16px; }
+  .seg button { font: inherit; font-weight: 600; font-size: .92rem; background: transparent; color: var(--muted); border: 0; padding: 10px 6px; border-radius: 10px; cursor: pointer; line-height: 1.2; }
+  .seg button small { display: block; font-weight: 400; font-size: .78rem; margin-top: 2px; }
+  .seg button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+  .seg button:focus-visible, .linkbtn:focus-visible, .thumb .x:focus-visible, .check input:focus-visible { outline: 3px solid var(--tape); outline-offset: 2px; }
+  .seg button[aria-pressed="true"]:focus-visible { outline-color: var(--tape); }
+  .multi-drop { min-height: 120px; }
+  .notice { background: #FBE9C8; color: #5A4300; border-radius: 12px; padding: 12px 14px; font-size: .92rem; margin-bottom: 12px; }
+  .count-row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin: 10px 2px 8px; min-height: 1.5em; }
+  .count { font-weight: 600; font-size: .95rem; color: var(--muted); }
+  .count.warn { color: var(--danger); }
+  .count.good { color: var(--mat); }
+  .linkbtn { background: none; border: 0; color: var(--muted); font: inherit; font-size: .9rem; text-decoration: underline; cursor: pointer; padding: 2px 4px; }
+  .thumbs { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 6px; max-height: 240px; overflow-y: auto; padding: 2px; }
+  .thumb { position: relative; aspect-ratio: 1; border-radius: 8px; overflow: hidden; background: var(--paper); }
+  .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .thumb .x { position: absolute; top: 3px; right: 3px; width: 22px; height: 22px; border-radius: 50%; background: rgba(34,48,43,.78); color: #fff; font-size: 15px; line-height: 1; padding: 0; display: flex; align-items: center; justify-content: center; }
+  .thumb .x:hover { background: var(--danger); }
+  details.guide ol { margin: 0 0 10px; padding-left: 20px; color: var(--ink); font-size: .92rem; }
+  details.guide li { margin-bottom: 6px; }
+  .shot .badge { position: absolute; left: 8px; bottom: 8px; background: rgba(34,48,43,.85); color: #fff; font-size: .82rem; font-weight: 600; padding: 3px 10px; border-radius: 999px; }
+  .bar { width: min(60%, 340px); height: 8px; background: rgba(255,255,255,.25); border-radius: 999px; overflow: hidden; }
+  .bar i { display: block; height: 100%; width: 0; background: var(--tape); border-radius: 999px; transition: width .6s ease; }
+  .info .note { color: var(--mat); font-size: .9rem; font-weight: 600; }
+  .hbody .tag { display: inline-block; align-self: flex-start; background: #DCE6E0; color: var(--mat); font-size: .78rem; font-weight: 600; padding: 1px 9px; border-radius: 999px; margin-bottom: 4px; }
+
+
+  #live-stage { align-items: center; justify-content: center; flex-direction: column; gap: 14px; padding: 18px; }
+  #live-dome { width: min(78%, 400px); height: auto; aspect-ratio: 1; }
+  .legend { color: #EAF2EE; font-weight: 600; display: flex; gap: 18px; align-items: center; flex-wrap: wrap; justify-content: center; }
+  .legend span.sw { display: inline-block; width: 14px; height: 14px; border-radius: 4px; margin-right: 6px; vertical-align: -2px; }
+  .sw.need { background: #D64541; } .sw.done { background: #2EA06E; }
+  .live-note { color: #D3E4DC; font-size: .92rem; text-align: center; max-width: 44ch; }
+  #live-ui p { margin: 0 0 12px; color: var(--muted); }
+  #live-ui .qr { display: block; width: 210px; max-width: 70%; margin: 4px 0 10px; background: #fff; border-radius: 12px; padding: 8px; }
+  #live-ui code { word-break: break-all; font-size: .85rem; background: var(--paper); padding: 2px 6px; border-radius: 6px; }
+  .live-banner { background: #DCE9E2; color: var(--ink); border-radius: 12px; padding: 10px 14px; font-weight: 600; font-size: .92rem; margin: 10px 0; }
+
   @media (max-width: 900px) {
     #view-create { grid-template-columns: 1fr; }
     .stage { min-height: 480px; }
@@ -153,60 +192,152 @@
   <main>
     <div id="view-create">
       <section class="panel">
-        <h1>Turn one photo into a 3D model</h1>
-        <p class="lead">Use a single object on a plain background. Most models take 30 to 90 seconds.</p>
+        <h1>Turn photos into a 3D model</h1>
+        <p class="lead" id="lead">Use a single object on a plain background. Most models take 30 to 90 seconds.</p>
 
-        <label class="drop" id="drop">
-          <input type="file" id="file" accept="image/png,image/jpeg,image/webp">
-          <div class="hint"><strong>Drop an image here</strong><span>or click to choose a file (PNG, JPG, WebP)</span></div>
-          <img id="preview" alt="Selected image preview">
-        </label>
+        <div class="seg" role="group" aria-label="Number of photos">
+          <button type="button" id="mode-single" aria-pressed="true">One photo<small>fast</small></button>
+          <button type="button" id="mode-multi" aria-pressed="false">Many photos<small>accurate</small></button>
+          <button type="button" id="mode-live" aria-pressed="false">Live phone<small>guided</small></button>
+        </div>
 
-        <details class="opts">
-          <summary>Options</summary>
-          <div class="field">
-            <label for="engine-sel">Model engine</label>
-            <select id="engine-sel"></select>
-            <small>Auto tries Stable Fast 3D first and switches to TripoSR if it fails.</small>
-          </div>
-          <div class="field">
-            <label for="fg">Object size in frame: <span id="fg-val">85%</span></label>
-            <input type="range" id="fg" min="0.5" max="1" step="0.05" value="0.85">
-            <small>Lower it if the object touches the image edges.</small>
-          </div>
-          <div class="field">
-            <label for="detail">Mesh detail</label>
-            <select id="detail">
-              <option value="low">Low, fastest</option>
-              <option value="medium" selected>Medium</option>
-              <option value="high">High, slowest</option>
-            </select>
-            <small>Applies to TripoSR.</small>
-          </div>
-          <div class="field">
-            <label for="remesh">Mesh style</label>
-            <select id="remesh">
-              <option value="None" selected>Original</option>
-              <option value="Triangle">Clean triangles</option>
-              <option value="Quad">Clean quads</option>
-            </select>
-            <small>Applies to Stable Fast 3D.</small>
-          </div>
-          <div class="field">
-            <label for="tex">Texture quality</label>
-            <select id="tex">
-              <option value="512">Small, 512 px</option>
-              <option value="1024" selected>Standard, 1024 px</option>
-              <option value="2048">Sharp, 2048 px</option>
-            </select>
-            <small>Applies to Stable Fast 3D.</small>
-          </div>
-        </details>
+        <div id="single-ui">
+          <label class="drop" id="drop">
+            <input type="file" id="file" accept="image/png,image/jpeg,image/webp">
+            <div class="hint"><strong>Drop an image here</strong><span>or click to choose a file (PNG, JPG, WebP)</span></div>
+            <img id="preview" alt="Selected image preview">
+          </label>
 
-        <label class="check" id="compare-wrap">
-          <input type="checkbox" id="compare">
-          <span><b>Compare both engines</b><small>Builds the model twice and shows the results side by side. Takes about twice as long.</small></span>
-        </label>
+          <details class="opts">
+            <summary>Options</summary>
+            <div class="field">
+              <label for="engine-sel">Model engine</label>
+              <select id="engine-sel"></select>
+              <small>Auto tries Stable Fast 3D first and switches to TripoSR if it fails.</small>
+            </div>
+            <div class="field">
+              <label for="fg">Object size in frame: <span id="fg-val">85%</span></label>
+              <input type="range" id="fg" min="0.5" max="1" step="0.05" value="0.85">
+              <small>Lower it if the object touches the image edges.</small>
+            </div>
+            <div class="field">
+              <label for="detail">Mesh detail</label>
+              <select id="detail">
+                <option value="low">Low, fastest</option>
+                <option value="medium" selected>Medium</option>
+                <option value="high">High, slowest</option>
+              </select>
+              <small>Applies to TripoSR.</small>
+            </div>
+            <div class="field">
+              <label for="remesh">Mesh style</label>
+              <select id="remesh">
+                <option value="None" selected>Original</option>
+                <option value="Triangle">Clean triangles</option>
+                <option value="Quad">Clean quads</option>
+              </select>
+              <small>Applies to Stable Fast 3D.</small>
+            </div>
+            <div class="field">
+              <label for="tex">Texture quality</label>
+              <select id="tex">
+                <option value="512">Small, 512 px</option>
+                <option value="1024" selected>Standard, 1024 px</option>
+                <option value="2048">Sharp, 2048 px</option>
+              </select>
+              <small>Applies to Stable Fast 3D.</small>
+            </div>
+          </details>
+
+          <label class="check" id="compare-wrap">
+            <input type="checkbox" id="compare">
+            <span><b>Compare both engines</b><small>Builds the model twice and shows the results side by side. Takes about twice as long.</small></span>
+          </label>
+        </div>
+
+        <div id="multi-ui" hidden>
+          <div class="notice" id="mv-warn" hidden></div>
+          <label class="drop multi-drop" id="mdrop">
+            <input type="file" id="files" accept="image/png,image/jpeg,image/webp" multiple>
+            <div class="hint"><strong>Drop 20 to 60 photos here</strong><span>Photos taken all the way around one object, or click to choose files</span></div>
+          </label>
+          <div class="count-row">
+            <span class="count" id="count"></span>
+            <button type="button" class="linkbtn" id="clear" hidden>Remove all</button>
+          </div>
+          <div class="thumbs" id="thumbs"></div>
+
+          <details class="opts">
+            <summary>Options</summary>
+            <div class="field">
+              <label for="mquality">Detail</label>
+              <select id="mquality">
+                <option value="draft">Draft, fastest</option>
+                <option value="standard" selected>Standard</option>
+                <option value="fine">Fine, slowest</option>
+              </select>
+              <small>Higher detail adds a little time and makes a larger file.</small>
+            </div>
+            <label class="check">
+              <input type="checkbox" id="mcolors" checked>
+              <span><b>Paint colors from the photos</b></span>
+            </label>
+          </details>
+
+          <details class="opts guide">
+            <summary>How to take the photos</summary>
+            <ol>
+              <li>Put the object on a plain surface. Walk around it. Do not spin the object, because the background must stay still.</li>
+              <li>Take 20 to 60 photos in a full circle. Each photo should overlap the last by about two thirds.</li>
+              <li>Make a second circle higher up, and a third lower down if you can.</li>
+              <li>Keep the whole object in every photo, filling about half of the frame.</li>
+              <li>Use steady, even light. No flash and no moving shadows.</li>
+              <li>Shiny, see-through, and very dark objects do not work well.</li>
+            </ol>
+          </details>
+        </div>
+
+
+        <div id="live-ui" hidden>
+          <div class="notice" id="live-warn" hidden></div>
+          <div id="live-idle">
+            <p>Your phone becomes a guided camera. It shows which sides are still needed in red and which are done in green, and takes the photos for you while you walk around the object.</p>
+            <button class="go" id="live-start" type="button">Connect my phone</button>
+            <details class="opts guide">
+              <summary>What you need</summary>
+              <ol>
+                <li>The phone and this computer on the same Wi-Fi, or the computer connected to the phone's hotspot.</li>
+                <li>When Windows asks, allow Python through the firewall on private networks.</li>
+                <li>On the phone, accept the security warning once. The certificate is made on this computer.</li>
+                <li>A phone with motion sensors, using Chrome or Safari. Allow the camera and motion access.</li>
+              </ol>
+            </details>
+          </div>
+          <div id="live-wait" hidden>
+            <img class="qr" id="live-qr" alt="QR code that opens the capture page on your phone">
+            <p>Scan the code with your phone camera. If that does not work, open this address on the phone:</p>
+            <p><code id="live-url"></code></p>
+            <p class="status" id="live-state" role="status" aria-live="polite">Waiting for the phone...</p>
+          </div>
+          <div id="live-run" hidden>
+            <div class="count-row"><span class="count" id="live-count"></span></div>
+            <div class="live-banner" id="live-banner" hidden></div>
+            <div class="thumbs" id="live-thumbs"></div>
+          </div>
+          <details class="opts" id="live-opts" hidden>
+            <summary>Options</summary>
+            <div class="field">
+              <label for="lquality">Detail</label>
+              <select id="lquality">
+                <option value="draft">Draft, fastest</option>
+                <option value="standard" selected>Standard</option>
+                <option value="fine">Fine, slowest</option>
+              </select>
+            </div>
+            <label class="check"><input type="checkbox" id="lcolors" checked><span><b>Paint colors from the photos</b></span></label>
+          </details>
+          <button class="linkbtn" id="live-cancel" type="button" hidden>Cancel this session</button>
+        </div>
 
         <button class="go" id="go" disabled>Build 3D model</button>
         <p class="status" id="status" role="status" aria-live="polite"></p>
@@ -214,14 +345,20 @@
       </section>
 
       <section class="stage" id="stage" data-state="idle" aria-label="3D model preview">
-        <button class="newimg" id="reset" type="button">New image</button>
+        <button class="newimg" id="reset" type="button">New model</button>
         <div class="layer" id="empty"><p>Your 3D model will appear here</p></div>
         <div class="layer" id="working">
-          <div class="shot"><img id="shot" alt=""><div class="scan"></div></div>
+          <div class="shot"><img id="shot" alt=""><div class="scan"></div><span class="badge" id="shot-badge" hidden></span></div>
           <div class="work-text" id="work-text">Starting... 0:00</div>
+          <div class="bar" id="bar" hidden><i id="bar-fill"></i></div>
           <div class="work-lines" id="work-lines"></div>
         </div>
         <div class="layer" id="results"></div>
+        <div class="layer" id="live-stage">
+          <canvas id="live-dome" width="440" height="440" aria-label="Coverage map of the object"></canvas>
+          <div class="legend"><span><span class="sw need"></span>Still needed</span><span><span class="sw done"></span>Done</span></div>
+          <div class="live-note">You start at the bottom of the circle and walk to the left around the object. The outer ring is photos from a low angle, the inner ring from high up looking down.</div>
+        </div>
       </section>
     </div>
 
@@ -236,6 +373,7 @@
 
   <footer>Khaled 2026</footer>
 
+<script src="dome.js"></script>
 <script>
 const $ = id => document.getElementById(id);
 function el(tag, cls, text) { const n = document.createElement(tag); if (cls) n.className = cls; if (text !== undefined) n.textContent = text; return n; }
@@ -243,24 +381,80 @@ const fmtNum = n => (n == null ? "n/a" : n.toLocaleString());
 const fmtSize = kb => (kb == null ? "n/a" : kb >= 1024 ? (kb / 1024).toFixed(1) + " MB" : kb + " KB");
 const fmtTime = s => { s = Math.round(s); return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); };
 
+const LEAD = {
+  single: "Use a single object on a plain background. Most models take 30 to 90 seconds.",
+  multi: "Take 20 to 60 photos all the way around one object. A model built from many photos is more complete and more accurate, and takes a few minutes.",
+  live: "Use your phone as a guided camera. It shows which sides are still needed in red and which are done in green, so the whole object gets covered."
+};
+
 const stage = $("stage"), drop = $("drop"), fileInput = $("file"), goBtn = $("go"), statusEl = $("status");
-let cfg = { mode: "hf", engines: [] };
-let currentFile = null, tracking = [], pollTimer = null, clock = null, t0 = 0, busy = false;
+let cfg = { mode: "hf", engines: [], multiview: { available: true, reason: "", min: 4, max: 80 } };
+let mode = "single";
+let currentFile = null;                 // single mode
+let photos = [];                        // multi mode: [{ file, url }]
+let tracking = [], pollTimer = null, clock = null, t0 = 0, busy = false;
+let live = null, livePoll = null;      // live phone session: { id, count, state }
 
 function setStatus(msg, isError) { statusEl.textContent = msg || ""; statusEl.className = "status" + (isError ? " error" : ""); }
+
+function updateGo() {
+  if (mode === "multi") {
+    const n = photos.length;
+    goBtn.textContent = n ? "Build from " + n + (n === 1 ? " photo" : " photos") : "Build 3D model";
+    goBtn.disabled = busy || n < cfg.multiview.min || !cfg.multiview.available;
+  } else if (mode === "live") {
+    const n = live ? live.count : 0;
+    goBtn.textContent = n ? "Build from " + n + (n === 1 ? " photo" : " photos") : "Build 3D model";
+    goBtn.disabled = busy || !live || n < cfg.multiview.min;
+  } else {
+    goBtn.textContent = "Build 3D model";
+    goBtn.disabled = busy || !currentFile;
+  }
+}
 
 /* ---------- config ---------- */
 async function loadConfig() {
   try { cfg = await (await fetch("/api/config")).json(); } catch (_) {}
+  if (!cfg.multiview) cfg.multiview = { available: false, reason: "", min: 4, max: 80 };
   const sel = $("engine-sel"); sel.replaceChildren();
   cfg.engines.forEach(e => { const o = el("option", "", e.label); o.value = e.id; sel.appendChild(o); });
   const local = cfg.mode === "local";
   $("compare-wrap").hidden = local;
   $("engine-sel").disabled = local;
   $("engine-note").textContent = local
-    ? "Running on this computer's GPU."
-    : "Running on free Hugging Face GPUs. It can be slow when they are busy." + (cfg.token ? "" : " Add a Hugging Face token to avoid quota errors.");
+    ? "Running on this computer's GPU for one photo. Many photos always run on the CPU."
+    : "One photo runs on free Hugging Face GPUs and can be slow when they are busy." + (cfg.token ? "" : " Add a Hugging Face token to avoid quota errors.");
+  const warn = $("mv-warn");
+  warn.hidden = cfg.multiview.available;
+  if (!cfg.multiview.available) warn.textContent = "Many-photo mode needs extra packages. Close the app, run the launcher again to install them, and reopen this page." + (cfg.multiview.reason ? " (" + cfg.multiview.reason + ")" : "");
+  const cap = cfg.capture || { available: false, reason: "" };
+  $("live-warn").hidden = cap.available;
+  if (!cap.available) $("live-warn").textContent = cap.reason || "Live capture is not available.";
+  $("live-start").disabled = !cap.available || !cfg.multiview.available;
+  if (cap.available && !cfg.multiview.available) { $("live-warn").hidden = false; $("live-warn").textContent = "Live capture builds with the many-photo packages. Run the launcher again to install them."; }
+  updateGo();
 }
+
+/* ---------- mode switch ---------- */
+function setMode(m) {
+  if (busy || m === mode) return;
+  mode = m;
+  $("mode-single").setAttribute("aria-pressed", m === "single");
+  $("mode-multi").setAttribute("aria-pressed", m === "multi");
+  $("mode-live").setAttribute("aria-pressed", m === "live");
+  $("single-ui").hidden = m !== "single";
+  $("multi-ui").hidden = m !== "multi";
+  $("live-ui").hidden = m !== "live";
+  $("lead").textContent = LEAD[m];
+  if (m === "live" && live) stage.dataset.state = "live";
+  else if (stage.dataset.state === "live") stage.dataset.state = "idle";
+  setStatus("");
+  updateGo();
+}
+$("mode-single").onclick = () => setMode("single");
+$("mode-multi").onclick = () => setMode("multi");
+$("mode-live").onclick = () => setMode("live");
+$("fg").addEventListener("input", () => { $("fg-val").textContent = Math.round($("fg").value * 100) + "%"; });
 
 /* ---------- tabs ---------- */
 function showTab(name) {
@@ -273,24 +467,136 @@ function showTab(name) {
 }
 $("tab-create").onclick = () => showTab("create");
 $("tab-history").onclick = () => showTab("history");
-$("fg").addEventListener("input", () => { $("fg-val").textContent = Math.round($("fg").value * 100) + "%"; });
 
-/* ---------- file selection ---------- */
+/* ---------- one photo ---------- */
 function setFile(f) {
   if (!f) return;
   if (!f.type.startsWith("image/")) { setStatus("Choose an image file (PNG, JPG or WebP).", true); return; }
   if (f.size > 10 * 1024 * 1024) { setStatus("That image is over 10 MB. Choose a smaller one.", true); return; }
   currentFile = f;
-  const url = URL.createObjectURL(f);
-  $("preview").src = url; $("shot").src = url;
+  $("preview").src = URL.createObjectURL(f);
   drop.classList.add("has-image");
-  goBtn.disabled = busy;
   setStatus("");
+  updateGo();
 }
 fileInput.addEventListener("change", () => setFile(fileInput.files[0]));
 ["dragenter", "dragover"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add("over"); }));
 ["dragleave", "drop"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove("over"); }));
 drop.addEventListener("drop", e => setFile(e.dataTransfer.files[0]));
+
+/* ---------- many photos ---------- */
+const mdrop = $("mdrop");
+function addPhotos(list) {
+  const max = cfg.multiview.max;
+  let notImage = 0, tooBig = 0, overLimit = 0;
+  for (const f of list) {
+    if (!f.type.startsWith("image/")) { notImage++; continue; }
+    if (f.size > 15 * 1024 * 1024) { tooBig++; continue; }
+    if (photos.some(p => p.file.name === f.name && p.file.size === f.size)) continue;
+    if (photos.length >= max) { overLimit++; continue; }
+    photos.push({ file: f, url: URL.createObjectURL(f) });
+  }
+  renderPhotos();
+  const msgs = [];
+  if (notImage) msgs.push(notImage + " file" + (notImage > 1 ? "s were" : " was") + " skipped because it is not an image.");
+  if (tooBig) msgs.push(tooBig + " photo" + (tooBig > 1 ? "s were" : " was") + " skipped for being over 15 MB.");
+  if (overLimit) msgs.push("The limit is " + max + " photos.");
+  setStatus(msgs.join(" "), msgs.length > 0);
+}
+function removePhoto(i) { URL.revokeObjectURL(photos[i].url); photos.splice(i, 1); renderPhotos(); }
+function clearPhotos() { photos.forEach(p => URL.revokeObjectURL(p.url)); photos = []; renderPhotos(); }
+function renderPhotos() {
+  const box = $("thumbs"); box.replaceChildren();
+  photos.forEach((p, i) => {
+    const t = el("div", "thumb");
+    const img = document.createElement("img"); img.src = p.url; img.alt = "Photo " + (i + 1); img.loading = "lazy";
+    const x = el("button", "x", "\u00d7"); x.type = "button"; x.setAttribute("aria-label", "Remove photo " + (i + 1));
+    x.onclick = () => removePhoto(i);
+    t.append(img, x); box.appendChild(t);
+  });
+  const n = photos.length, min = cfg.multiview.min, c = $("count");
+  if (!n) { c.textContent = ""; c.className = "count"; }
+  else if (n < min) { c.textContent = n + " of at least " + min + " photos"; c.className = "count warn"; }
+  else if (n < 15) { c.textContent = n + " photos. This works, but 20 or more is better."; c.className = "count"; }
+  else { c.textContent = n + " photos"; c.className = "count good"; }
+  $("clear").hidden = !n;
+  updateGo();
+}
+$("files").addEventListener("change", e => { addPhotos(Array.from(e.target.files)); e.target.value = ""; });
+$("clear").onclick = clearPhotos;
+["dragenter", "dragover"].forEach(ev => mdrop.addEventListener(ev, e => { e.preventDefault(); mdrop.classList.add("over"); }));
+["dragleave", "drop"].forEach(ev => mdrop.addEventListener(ev, e => { e.preventDefault(); mdrop.classList.remove("over"); }));
+mdrop.addEventListener("drop", e => addPhotos(Array.from(e.dataTransfer.files)));
+
+/* ---------- live phone capture ---------- */
+function stopLive(message) {
+  clearTimeout(livePoll); livePoll = null; live = null;
+  $("live-idle").hidden = false; $("live-wait").hidden = true; $("live-run").hidden = true;
+  $("live-opts").hidden = true; $("live-cancel").hidden = true; $("live-banner").hidden = true;
+  $("live-thumbs").replaceChildren();
+  if (mode === "live" && stage.dataset.state === "live") stage.dataset.state = "idle";
+  if (message) setStatus(message, true);
+  updateGo();
+}
+
+$("live-start").onclick = async () => {
+  setStatus("");
+  $("live-start").disabled = true;
+  try {
+    const d = await send("/api/capture", new FormData());
+    live = { id: d.id, count: 0, state: d.state };
+    $("live-qr").src = d.qr; $("live-url").textContent = d.url;
+    $("live-idle").hidden = true; $("live-wait").hidden = false; $("live-cancel").hidden = false;
+    stage.dataset.state = "live";
+    applyLive(d.state);
+    pollLive();
+  } catch (e) { setStatus(e.message, true); }
+  $("live-start").disabled = false;
+};
+
+$("live-cancel").onclick = async () => {
+  if (!live) return;
+  const id = live.id;
+  stopLive();
+  try { await fetch("/api/capture/" + id, { method: "DELETE" }); } catch (_) {}
+};
+
+async function pollLive() {
+  clearTimeout(livePoll);
+  if (!live) return;
+  try {
+    const r = await fetch("/api/capture/" + live.id);
+    if (r.status === 404) { stopLive("The live session ended. Start a new one."); return; }
+    if (r.ok) applyLive(await r.json());
+  } catch (_) { /* keep trying */ }
+  if (live) livePoll = setTimeout(pollLive, 1500);
+}
+
+function applyLive(s) {
+  live.count = s.count; live.state = s;
+  Dome.drawDome($("live-dome"), s.cells, { start: true });
+  if (s.count === 0) {
+    $("live-state").textContent = s.phone ? "Phone connected. Press Start here on the phone, then walk around the object." : "Waiting for the phone...";
+  } else {
+    $("live-wait").hidden = true; $("live-run").hidden = false; $("live-opts").hidden = false;
+    $("live-count").textContent = s.covered + " of " + s.total + " areas covered, " + s.count + " photos";
+    const b = $("live-banner");
+    if (s.finished) { b.textContent = "The phone is finished. Check the photos, then press Build."; b.hidden = false; }
+    else if (s.count >= s.min && s.covered < 0.7 * s.total) { b.textContent = "Some areas are still red. The model will be less complete there."; b.hidden = false; }
+    else b.hidden = true;
+    const box = $("live-thumbs"); box.replaceChildren();
+    s.photos.forEach(p => {
+      const t = el("div", "thumb");
+      const img = document.createElement("img"); img.src = p.url; img.alt = "Photo " + (p.n + 1); img.loading = "lazy";
+      const x = el("button", "x", "\u00d7"); x.type = "button"; x.setAttribute("aria-label", "Delete photo " + (p.n + 1));
+      x.onclick = async () => {
+        try { const r = await fetch("/api/capture/" + live.id + "/photos/" + p.n, { method: "DELETE" }); if (r.ok) applyLive(await r.json()); } catch (_) {}
+      };
+      t.append(img, x); box.appendChild(t);
+    });
+  }
+  updateGo();
+}
 
 /* ---------- build ---------- */
 function formFor(engine) {
@@ -304,24 +610,55 @@ function formFor(engine) {
   return fd;
 }
 
+async function send(url, fd) {
+  const r = await fetch(url, { method: "POST", body: fd });
+  let d = {}; try { d = await r.json(); } catch (_) {}
+  if (!r.ok) throw new Error(d.detail || "The server rejected this upload.");
+  return d;
+}
+
+function setBar(pct) {
+  const bar = $("bar");
+  if (pct == null) { bar.hidden = true; return; }
+  bar.hidden = false;
+  $("bar-fill").style.width = Math.max(2, Math.min(100, pct)) + "%";
+}
+
 goBtn.addEventListener("click", async () => {
-  if (!currentFile || busy) return;
-  busy = true; goBtn.disabled = true; setStatus("");
-  const engines = (cfg.mode !== "local" && $("compare").checked) ? ["sf3d", "triposr"] : [$("engine-sel").value || "auto"];
+  if (busy || goBtn.disabled) return;
+  busy = true; updateGo(); setStatus("");
   stage.dataset.state = "working";
   $("work-lines").replaceChildren();
+  setBar(null);
   startClock();
   try {
     tracking = [];
-    for (const eng of engines) {
-      const r = await fetch("/api/jobs", { method: "POST", body: formFor(eng) });
-      let d = {}; try { d = await r.json(); } catch (_) {}
-      if (!r.ok) throw new Error(d.detail || "The server rejected this image.");
-      tracking.push(d.id);
+    if (mode === "multi") {
+      $("shot").src = photos[0].url;
+      $("shot-badge").textContent = photos.length + " photos"; $("shot-badge").hidden = false;
+      const fd = new FormData();
+      photos.forEach(p => fd.append("files", p.file));
+      fd.append("quality", $("mquality").value);
+      fd.append("colors", $("mcolors").checked ? "true" : "false");
+      $("work-lines").textContent = "Uploading " + photos.length + " photos...";
+      tracking.push((await send("/api/jobs/multi", fd)).id);
+    } else if (mode === "live") {
+      const ph = live.state && live.state.photos && live.state.photos[0];
+      if (ph) $("shot").src = ph.url;
+      $("shot-badge").textContent = live.count + " photos"; $("shot-badge").hidden = false;
+      const fd = new FormData();
+      fd.append("quality", $("lquality").value);
+      fd.append("colors", $("lcolors").checked ? "true" : "false");
+      tracking.push((await send("/api/capture/" + live.id + "/build", fd)).id);
+      stopLive();
+    } else {
+      $("shot").src = $("preview").src; $("shot-badge").hidden = true;
+      const engines = (cfg.mode !== "local" && $("compare").checked) ? ["sf3d", "triposr"] : [$("engine-sel").value || "auto"];
+      for (const eng of engines) tracking.push((await send("/api/jobs", formFor(eng))).id);
     }
     poll();
   } catch (e) {
-    stopClock(); busy = false; goBtn.disabled = false;
+    stopClock(); busy = false; updateGo();
     stage.dataset.state = "idle";
     setStatus(e.message, true);
   }
@@ -357,10 +694,12 @@ function renderWorking(jobs) {
     else text = j.status === "done" ? "Done" : "Failed";
     box.appendChild(el("div", "", (jobs.length > 1 ? label + ": " : "") + text));
   });
+  const prog = jobs.length === 1 && jobs[0].status === "processing" ? jobs[0].progress : null;
+  setBar(prog);
 }
 
 function finish(jobs) {
-  stopClock(); busy = false; goBtn.disabled = !currentFile;
+  stopClock(); busy = false; updateGo(); setBar(null);
   showResults(jobs);
   const ok = jobs.filter(j => j.status === "done").length;
   if (!ok) setStatus("The model could not be built. Read the message on the right, then try again.", true);
@@ -389,6 +728,7 @@ function doneCard(j) {
   view.appendChild(mv);
   const info = el("div", "info");
   info.appendChild(el("div", "title", j.engine_label));
+  if (j.note) info.appendChild(el("div", "note", j.note));
   if (j.duration != null) info.appendChild(el("div", "meta", fmtTime(j.duration) + " to build"));
   info.appendChild(el("div", "meta", fmtNum(j.vertices) + " vertices, " + fmtNum(j.faces) + " faces, " + fmtSize(j.size_kb)));
   info.appendChild(downloads(j));
@@ -417,7 +757,8 @@ $("reset").addEventListener("click", () => {
   stage.dataset.state = "idle";
   currentFile = null; fileInput.value = "";
   drop.classList.remove("has-image");
-  goBtn.disabled = true; setStatus("");
+  clearPhotos();
+  setStatus(""); updateGo();
 });
 
 /* ---------- history ---------- */
@@ -432,6 +773,7 @@ async function loadHistory() {
     const img = document.createElement("img"); img.src = j.thumb_url; img.alt = ""; img.loading = "lazy";
     img.onerror = () => { img.style.visibility = "hidden"; };
     const body = el("div", "hbody");
+    if (j.kind === "multi") body.appendChild(el("span", "tag", "Many photos"));
     body.appendChild(el("div", "name", j.original_name || "image"));
     body.appendChild(el("div", "meta", new Date(j.created * 1000).toLocaleString()));
     if (j.status === "done") {

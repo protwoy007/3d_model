@@ -23,7 +23,7 @@ if ! "$PYEXE" -c 'import venv, ensurepip' >/dev/null 2>&1; then
 fi
 
 # 2. Project files
-for f in main.py engines.py store.py requirements.txt static/index.html; do
+for f in main.py engines.py store.py photogrammetry.py capture.py certs.py serve.py requirements.txt static/index.html; do
   [ -f "$f" ] || { echo "[ERROR] Missing $f"; exit 1; }
 done
 mkdir -p outputs
@@ -38,6 +38,17 @@ if [ ! -f venv/.deps_free_v2_ok ]; then
   python -m pip install --upgrade pip
   pip install -r requirements.txt
   echo ok > venv/.deps_free_v2_ok
+fi
+
+# 4b. Many-photo packages (optional, does not stop the app)
+if [ ! -f venv/.deps_mv2_ok ]; then
+  echo "Installing many-photo and live-capture packages. This can take a few minutes..."
+  if pip install -r requirements-multiview.txt; then
+    echo ok > venv/.deps_mv2_ok
+  else
+    echo "[WARNING] The many-photo packages could not be installed. One-photo mode still works."
+    echo "Python 3.11 or 3.12 gives the best chance. See Troubleshooting in README.md."
+  fi
 fi
 
 # 5. Hugging Face token (optional)
@@ -63,4 +74,4 @@ echo "Starting img23d at http://127.0.0.1:8000  (Ctrl+C to stop)"
     sleep 2
   done
 ) &
-exec python -m uvicorn main:app --host 127.0.0.1 --port 8000
+exec python serve.py
