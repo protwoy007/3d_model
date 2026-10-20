@@ -1,5 +1,3 @@
-# img23d
-
 Turn photos into a 3D model in your browser. Upload one photo for a fast model, or many photos of the same object for a more complete and more accurate one. Rotate the result and download it as GLB, STL, or OBJ.
 
 Built with FastAPI, SQLite, a plain HTML frontend, and [`<model-viewer>`](https://modelviewer.dev/) for the 3D preview.
